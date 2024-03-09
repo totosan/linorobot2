@@ -157,6 +157,13 @@ Optional parameters:
     ```
     ros2 launch linorobot2_bringup bringup.launch.py base_serial_port:=/dev/ttyACM1
     ```
+
+- **micro_ros_baudrate** - micro-ROS serial baudrate. default 115200.
+
+    ```
+    ros2 launch linorobot2_bringup bringup.launch.py base_serial_port:=/dev/ttyUSB0 micro_ros_baudrate:=921600
+    ```
+
 - **micro_ros_transport** - micro-ROS transport. default serial.
 - **micro_ros_port** - micro-ROS udp/tcp port number. default 8888.
 

@@ -74,6 +74,13 @@ function install_ydlidar {
     source $WORKSPACE/install/setup.bash
 }
 
+function install_ldlidar {
+    cd $WORKSPACE
+    git clone https://github.com/linorobot/ldlidar src/ldlidar
+    colcon build
+    source $WORKSPACE/install/setup.bash
+}
+
 function install_ldlidar_stl_ros2 {
     cd $WORKSPACE
     git clone https://github.com/hippo5329/ldlidar_stl_ros2.git src/ldlidar_stl_ros2

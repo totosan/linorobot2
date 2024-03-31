@@ -173,19 +173,19 @@ def generate_launch_description():
             }],
         ),
 
-        # Node(
-        #     condition=LaunchConfigurationEquals('sensor', 'ldlidar'),
-        #     package='ldlidar',
-        #     executable='ldlidar',
-        #     name='ldlidar',
-        #     output='screen',
-        #     parameters=[
-        #         {'serial_port': '/dev/ttyUSB0'},
-        #         {'topic_name': LaunchConfiguration('topic_name')},
-        #         {'lidar_frame': LaunchConfiguration('frame_id')},
-        #         {'range_threshold': 0.005}
-        #     ]
-        # ),
+        Node(
+            condition=LaunchConfigurationEquals('sensor', 'ldlidar'),
+            package='ldlidar',
+            executable='ldlidar',
+            name='ldlidar',
+            output='screen',
+            parameters=[
+                {'serial_port': '/dev/ttyUSB0'},
+                {'topic_name': LaunchConfiguration('topic_name')},
+                {'lidar_frame': LaunchConfiguration('frame_id')},
+                {'range_threshold': 0.005}
+            ]
+        ),
 
         Node(
             condition=LaunchConfigurationEquals('sensor', 'ld06'),

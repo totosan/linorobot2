@@ -25,7 +25,7 @@ WORKSPACE="/root/linorobot2_ws"
 
 ROBOT_TYPE_ARRAY=(2wd 4wd mecanum)
 DEPTH_SENSOR_ARRAY=(realsense zed zedm zed2 zed2i oakd oakdlite oakdpro)
-LASER_SENSOR_ARRAY=(ydlidar xv11 ld06 ld19 stl27l a1 a2 a3 c1 s1 s2 s3)
+LASER_SENSOR_ARRAY=(ydlidar xv11 ld06 ld19 stl27l a1 a2 a3 c1 s1 s2 s3 ldlidar)
 LASER_SENSOR_ARRAY+=(${DEPTH_SENSOR_ARRAY[@]})
 
 if [ -z "$LASER_SENSOR" ]

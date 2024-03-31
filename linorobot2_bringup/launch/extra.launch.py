@@ -31,14 +31,17 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(laser_launch_path),
-            launch_arguments={
-                'sensor': 'ld06',
-                'topic_name': '/base/scan/unfiltered',
-                'frame_id': 'base_laser',
-                'lidar_serial_port': '/dev/ttyUSB1'
-            }.items()   
+        Node(
+            package='ldlidar',
+            executable='ldlidar',
+            name='ldlidar',
+            output='screen',
+            parameters=[
+                {'serial_port': '/dev/ttyUSB1'},
+                {'topic_name': '/base/scan/unfiltered'},
+                {'lidar_frame': 'base_laser'},
+                {'range_threshold': 0.005}
+            ]
         ),
         Node(
             package="laser_filters",

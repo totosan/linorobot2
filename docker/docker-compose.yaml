@@ -136,3 +136,17 @@ services:
       - /dev/dri:/dev/dri
     shm_size: "1gb"
     restart: unless-stopped
+
+  kasmvnc:
+    runtime: ${RUNTIME}
+    container_name: kasmvnc
+    image: ghcr.io/linuxserver/baseimage-kasmvnc:alpine318
+    privileged: true
+    network_mode: host
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - $HOME/.Xauthority:/root/.Xauthority
+    environment:
+      - DISPLAY=:200
+    devices:
+      - /dev/dri:/dev/dri

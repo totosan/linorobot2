@@ -1,4 +1,3 @@
-version: "3.9"
 services:   
   base:
     image: linorobot2-${DEPLOY}:${USE_ROS_DISTRO}

@@ -172,6 +172,21 @@ Optional parameters:
     ros2 launch linorobot2_bringup bringup.launch.py micro_ros_transport:=udp4 micro_ros_port:=8888
     ```
 
+- **madgwick** - Set to true to enable magnetometer support. The madgwick filter will fuse imu/data_raw and imu/mag to imu/data. You may visualize the IMU and manetometer by [enable the IMU and magetometer plug-ins](https://automaticaddison.com/how-to-publish-imu-data-using-ros-and-the-bno055-imu-sensor/) in RVIZ2. The ekf filter configuration will need update, as only 'vyaw' is enabled in the default configuration. Both IMU and magnetometer must be calibrated, otherwise the robot's pose will rotate.
+
+    ```
+    # enable magnetometer support
+    ros2 launch linorobot2_bringup bringup.launch.py madgwick:=true orientation_stddev:=0.01
+
+    linorobot2_ws/src/linorobot2/linorobot2_base/config/ekf.yaml
+        imu0: imu/data
+        imu0_config: [false, false, false,
+                      false, false, true,
+                      false, false, false,
+                      false, false, true,
+                      true, true, false]
+   ```
+
 - **joy** - Set to true to run the joystick node in the background. (Tested on Logitech F710).
 
 Always wait for the microROS agent to be connected before running any application (ie. creating a map or autonomous navigation). Once connected, the agent will print:

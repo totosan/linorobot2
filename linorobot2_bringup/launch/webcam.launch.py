@@ -3,7 +3,7 @@ from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
 from launch.substitutions import PathJoinSubstitution, PythonExpression, LaunchConfiguration
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch_ros.substitutions import FindPackageShare
+from launch_ros.substitutions import FindPackageShare, FindPackage
 from launch.conditions import IfCondition, LaunchConfigurationEquals
 from launch_ros.actions import Node
 
@@ -21,10 +21,11 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'video_device': '/dev/video0',
-                'image_width': 640,
-                'image_height': 480,
+                #'image_width': 1920,
+                #'image_height': 1080,
                 'pixel_format': 'mjpeg2rgb',
                 'camera_frame_id': 'usb_cam',
+                'camera_info_url': "package://linorobot2_bringup/config/camera_info.yaml"
                 # Add other parameters as needed
             }]#,
             #remappings=[

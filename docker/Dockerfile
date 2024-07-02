@@ -218,5 +218,6 @@ RUN if [ ${DEPLOY} == "hardware" ]; then \
 WORKDIR /root/linorobot2_ws
 RUN source /opt/ros/$ROS_DISTRO/setup.bash \
     && colcon build
-
+RUN sudo apt-get update -y && sudo apt-get install -y python3-pip
+RUN pip3 install trimesh numpy pycollada scipy networkx opencv-contrib-python matplotlib    
 ENTRYPOINT ["/root/entrypoint.sh"]

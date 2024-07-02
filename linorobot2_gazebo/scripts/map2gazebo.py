@@ -268,7 +268,7 @@ class MapConverter():
           
           # set all -1 (unknown) values to 0 (unoccupied)
           map_array[map_array < 0] = 0
-          contours = self.get_occupied_regions(map_array, map_info['occupied_thresh'])
+          contours = self.get_occupied_regions(map_array)
           print('Processing...')
           meshes = [self.contour_to_mesh(c, map_info) for c in contours]
 
@@ -324,13 +324,13 @@ class MapConverter():
                   files_dict[base_name] = [os.path.join(directory_path, filename)]
       return files_dict
     
-    def get_occupied_regions(self, map_array, occupied_thresh):
+    def get_occupied_regions(self, map_array):
         """
         Get occupied regions of map
         """
         map_array = map_array.astype(np.uint8)
         _, thresh_map = cv2.threshold(
-                map_array, occupied_thresh*255, 100, cv2.THRESH_BINARY)
+                map_array, 253, 255, cv2.THRESH_BINARY)
         contours, hierarchy = cv2.findContours(
                 thresh_map, cv2.RETR_CCOMP, cv2.CHAIN_APPROX_NONE)
         # Using cv2.RETR_CCOMP classifies external contours at top level of

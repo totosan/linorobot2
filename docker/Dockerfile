@@ -34,6 +34,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         software-properties-common \
         wget \
         curl \
+        python3-pip \
     && rm -rf /var/lib/apt/lists/*
 
 FROM nvidia/cuda:12.1.0-runtime-ubuntu${UBUNTU_VER} as ros2nvidia
@@ -66,6 +67,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         software-properties-common \
         wget \
         curl \
+        python3-pip \
         libegl1-mesa \
         libglu1-mesa \ 
         libxv1 \
@@ -218,6 +220,5 @@ RUN if [ ${DEPLOY} == "hardware" ]; then \
 WORKDIR /root/linorobot2_ws
 RUN source /opt/ros/$ROS_DISTRO/setup.bash \
     && colcon build
-RUN sudo apt-get update -y && sudo apt-get install -y python3-pip
-RUN pip3 install trimesh numpy pycollada scipy networkx opencv-contrib-python matplotlib    
+
 ENTRYPOINT ["/root/entrypoint.sh"]

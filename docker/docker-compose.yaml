@@ -31,6 +31,7 @@ services:
       - LINOROBOT2_DEPTH_SENSOR=${DEPTH_SENSOR} 
       - DISPLAY=${DISPLAY} 
       - QT_X11_NO_MITSHM=1
+      - WORLD=${WORLD:-playground}
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - $HOME/.Xauthority:/root/.Xauthority
@@ -39,7 +40,7 @@ services:
   gazebo:
     container_name: gazebo
     extends: dev
-    command: ros2 launch linorobot2_gazebo gazebo.launch.py 
+    command: ros2 launch linorobot2_gazebo gazebo.launch.py world:=/root/linorobot2_ws/install/linorobot2_gazebo/share/linorobot2_gazebo/worlds/${WORLD:-playground}.world
     devices:
       - /dev:/dev
 
@@ -76,7 +77,7 @@ services:
     extends: dev
     command: >
       ros2 launch linorobot2_navigation navigation.launch.py
-      map:=/root/linorobot2_ws/src/linorobot2/linorobot2_navigation/maps/playground.yaml
+      map:=/root/linorobot2_ws/src/linorobot2/linorobot2_navigation/maps/${WORLD:-playground}.yaml
       rviz:=false
       sim:=false
 
@@ -85,7 +86,7 @@ services:
     extends: dev
     command: >
       ros2 launch linorobot2_navigation navigation.launch.py
-      map:=/root/linorobot2_ws/src/linorobot2/linorobot2_navigation/maps/playground.yaml
+      map:=/root/linorobot2_ws/src/linorobot2/linorobot2_navigation/maps/${WORLD:-playground}.yaml
       rviz:=true
       sim:=true
 
@@ -112,6 +113,8 @@ services:
     container_name: debug
     extends: dev
     command: sleep infinity
+    volumes:
+    - ../.:/root/linorobot2_ws/src/linorobot2
 
   webtop:
     image: lscr.io/linuxserver/webtop:latest

@@ -393,13 +393,13 @@ class MapConverter():
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(argument_default=argparse.SUPPRESS)
     parser.add_argument(
-        '--map_dir', type=str, required=True,
-        help='File name of the map to convert'
+      '--map_dir', type=str, required=True,
+      help='File name of the map to convert'
     )
 
     parser.add_argument(
-        '--export_dir', type=str, default=os.path.abspath('.'),
-        help='Mesh output directory'
+      '--model_dir', type=str, default=os.path.abspath('.'),
+      help='Gazebo model output directory'
     )
 
     parser.add_argument(
@@ -409,6 +409,6 @@ if __name__ == "__main__":
 
     option = parser.parse_args()
 
-    Converter = MapConverter(option.map_dir, option.export_dir, option.world_dir)
+    Converter = MapConverter(option.map_dir, option.model_dir, option.world_dir)
     Converter.map_callback()
     print('Conversion Done')

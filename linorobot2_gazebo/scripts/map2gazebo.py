@@ -113,7 +113,7 @@ XML_WORLD_TEMPLATE="""
           </inertia>
         </inertial>
         <collision name='collision'>
-          <pose>0 0 0 0 -0 0</pose>
+          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <mesh>
               <uri>model://{name}/meshes/{name}.stl</uri>
@@ -134,7 +134,7 @@ XML_WORLD_TEMPLATE="""
           </surface>
         </collision>
         <visual name='visual'>
-          <pose>0 0 0 0 -0 0</pose>
+          <pose>0 0 0 0 0 0</pose>
           <geometry>
             <mesh>
               <uri>model://{name}/meshes/{name}.stl</uri>
@@ -146,35 +146,35 @@ XML_WORLD_TEMPLATE="""
         <kinematic>0</kinematic>
       </link>
       <static>1</static>
-      <pose>0.806744 0.462246 0 0 -0 0</pose>
+      <pose>0 0 0 0 0 0</pose>
     </model>
     <state world_name='default'>
-      <sim_time>40 250000000</sim_time>
-      <real_time>40 305333074</real_time>
-      <wall_time>1719764932 579411128</wall_time>
-      <iterations>40250</iterations>
+      <sim_time>0 0</sim_time>
+      <real_time>0 0</real_time>
+      <wall_time>0 0</wall_time>
+      <iterations>0</iterations>
       <model name='{name}'>
-        <pose>0 0 0 0 -0 0</pose>
+        <pose>0 0 0 0 0 0</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>0.806744 0.462246 0 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
+          <pose>0 0 0 0 0 0</pose>
+          <velocity>0 0 0 0 0 0</velocity>
+          <acceleration>0 0 0 0 0 0</acceleration>
+          <wrench>0 0 0 0 0 0</wrench>
         </link>
       </model>
       <model name='ground_plane'>
-        <pose>0 0 0 0 -0 0</pose>
+        <pose>0 0 0 0 0 0</pose>
         <scale>1 1 1</scale>
         <link name='link'>
-          <pose>0 0 0 0 -0 0</pose>
-          <velocity>0 0 0 0 -0 0</velocity>
-          <acceleration>0 0 0 0 -0 0</acceleration>
-          <wrench>0 0 0 0 -0 0</wrench>
+          <pose>0 0 0 0 0 0</pose>
+          <velocity>0 0 0 0 0 0</velocity>
+          <acceleration>0 0 0 0 0 0</acceleration>
+          <wrench>0 0 0 0 0 0</wrench>
         </link>
       </model>
       <light name='sun'>
-        <pose>0 0 10 0 -0 0</pose>
+        <pose>0 0 10 0 0 0</pose>
       </light>
     </state>
     <gui fullscreen='0'>
@@ -242,7 +242,7 @@ XML_SDF_TEMPLATE = """
 
 
 class MapConverter():
-    def __init__(self, map_dir, export_dir, world_dir, height=2.0):
+    def __init__(self, map_dir, export_dir, world_dir, height=1.0):
         
         self.height = height
         self.export_dir = export_dir

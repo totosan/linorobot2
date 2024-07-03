@@ -288,8 +288,8 @@ class MapConverter():
           if not os.path.exists(self.world_dir):
             os.makedirs(self.world_dir)
 
-          stl_dir = self.export_dir + f'{key}/meshes/' + map_info['image'].replace('pgm','stl')
-          sdf_dir = self.export_dir + f'{key}/' + map_info['image'].replace('pgm','sdf')
+          stl_dir = self.export_dir + f'{key}/meshes/' + f'{key}.stl'
+          sdf_dir = self.export_dir + f'{key}/' + f'{key}.sdf'
           config_dir = self.export_dir + f'{key}/model.config'
 
           sdf_data = XML_SDF_TEMPLATE.format(name=key)
@@ -307,7 +307,7 @@ class MapConverter():
 
           # create world file create new parameter to save this files.
           world_data = XML_WORLD_TEMPLATE.format(name=key)
-          world_dir = self.world_dir + map_info['image'].replace('pgm','world')
+          world_dir = self.world_dir + f'{key}.world'
           with open(world_dir, 'w') as f:
               f.write(world_data)
 

@@ -252,11 +252,11 @@ class MapConverter():
     def map_callback(self):
         all_maps = self._extract_maps(self.map_dir)
         for key, value in all_maps.items():
-          pgm_dir = value[0] if ".pgm" in value[0] else value[1]
+          map_file_dir = value[0] if ".pgm" in value[0] or ".png" in value[0] else value[1]
           info_dir = value[0] if ".yaml" in value[0] else value[1]
-          map_array = cv2.imread(pgm_dir)
+          map_array = cv2.imread(map_file_dir)
           map_array = cv2.flip(map_array, 0)
-          print(f'loading map file: {pgm_dir}')
+          print(f'loading map file: {map_file_dir}')
           try:
               map_array = cv2.cvtColor(map_array, cv2.COLOR_BGR2GRAY)
           except cv2.error as err:
@@ -288,8 +288,8 @@ class MapConverter():
           if not os.path.exists(self.world_dir):
             os.makedirs(self.world_dir)
 
-          stl_dir = self.export_dir + f'{key}/meshes/' + map_info['image'].replace('pgm','stl')
-          sdf_dir = self.export_dir + f'{key}/' + map_info['image'].replace('pgm','sdf')
+          stl_dir = self.export_dir + f'{key}/meshes/' + f'{key}.stl'
+          sdf_dir = self.export_dir + f'{key}/' + f'{key}.sdf'
           config_dir = self.export_dir + f'{key}/model.config'
 
           sdf_data = XML_SDF_TEMPLATE.format(name=key)
@@ -307,7 +307,7 @@ class MapConverter():
 
           # create world file create new parameter to save this files.
           world_data = XML_WORLD_TEMPLATE.format(name=key)
-          world_dir = self.world_dir + map_info['image'].replace('pgm','world')
+          world_dir = self.world_dir + f'{key}.world'
           with open(world_dir, 'w') as f:
               f.write(world_data)
 
@@ -317,7 +317,7 @@ class MapConverter():
       for filename in os.listdir(directory_path):
           base_name, extension = os.path.splitext(filename)
           
-          if extension in ['.pgm', '.yaml']:
+          if extension in ['.pgm', '.yaml', '.png']:
               if base_name in files_dict:
                   files_dict[base_name].append(os.path.join(directory_path, filename))
               else:

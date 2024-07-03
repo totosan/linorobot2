@@ -252,7 +252,7 @@ class MapConverter():
     def map_callback(self):
         all_maps = self._extract_maps(self.map_dir)
         for key, value in all_maps.items():
-          pgm_dir = value[0] if ".pgm" in value[0] else value[1]
+          pgm_dir = value[0] if ".pgm" in value[0] or ".png" in value[0] else value[1]
           info_dir = value[0] if ".yaml" in value[0] else value[1]
           map_array = cv2.imread(pgm_dir)
           map_array = cv2.flip(map_array, 0)
@@ -317,7 +317,7 @@ class MapConverter():
       for filename in os.listdir(directory_path):
           base_name, extension = os.path.splitext(filename)
           
-          if extension in ['.pgm', '.yaml']:
+          if extension in ['.pgm', '.yaml', '.png']:
               if base_name in files_dict:
                   files_dict[base_name].append(os.path.join(directory_path, filename))
               else:

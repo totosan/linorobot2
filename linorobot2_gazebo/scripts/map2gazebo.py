@@ -252,11 +252,11 @@ class MapConverter():
     def map_callback(self):
         all_maps = self._extract_maps(self.map_dir)
         for key, value in all_maps.items():
-          pgm_dir = value[0] if ".pgm" in value[0] or ".png" in value[0] else value[1]
+          map_file_dir = value[0] if ".pgm" in value[0] or ".png" in value[0] else value[1]
           info_dir = value[0] if ".yaml" in value[0] else value[1]
-          map_array = cv2.imread(pgm_dir)
+          map_array = cv2.imread(map_file_dir)
           map_array = cv2.flip(map_array, 0)
-          print(f'loading map file: {pgm_dir}')
+          print(f'loading map file: {map_file_dir}')
           try:
               map_array = cv2.cvtColor(map_array, cv2.COLOR_BGR2GRAY)
           except cv2.error as err:

@@ -15,7 +15,9 @@
 from launch import LaunchDescription
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
-from launch_ros.actions import Node
+from launch_ros.actions import Node, SetRemap
+from launch.actions import IncludeLaunchDescription, GroupAction
+from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 
 def generate_launch_description():
@@ -24,8 +26,11 @@ def generate_launch_description():
         [FindPackageShare('linorobot2_bringup'), 'config', 'box_laser_filter.yaml']
     )
 
+    laser_launch_path = PathJoinSubstitution(
+        [FindPackageShare('linorobot2_bringup'), 'launch', 'lasers.launch.py']
+    )
+
     return LaunchDescription([
-    
         Node(
             package='ldlidar',
             executable='ldlidar',
@@ -38,7 +43,6 @@ def generate_launch_description():
                 {'range_threshold': 0.005}
             ]
         ),
-
         Node(
             package="laser_filters",
             executable="scan_to_scan_filter_chain",

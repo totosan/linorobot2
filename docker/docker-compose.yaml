@@ -1,4 +1,3 @@
-version: "3.9"
 services:   
   base:
     image: linorobot2-${DEPLOY}:${USE_ROS_DISTRO}
@@ -13,6 +12,7 @@ services:
         - ROBOT_BASE=${ROBOT_BASE}
         - LASER_SENSOR=${LASER_SENSOR} 
         - DEPTH_SENSOR=${DEPTH_SENSOR}
+        - RMW=${RMW}
       target: base
 
   dev:
@@ -31,6 +31,7 @@ services:
       - LINOROBOT2_DEPTH_SENSOR=${DEPTH_SENSOR} 
       - DISPLAY=${DISPLAY} 
       - QT_X11_NO_MITSHM=1
+      - WORLD=${WORLD:-playground}
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - $HOME/.Xauthority:/root/.Xauthority
@@ -39,7 +40,7 @@ services:
   gazebo:
     container_name: gazebo
     extends: dev
-    command: ros2 launch linorobot2_gazebo gazebo.launch.py 
+    command: ros2 launch linorobot2_gazebo gazebo.launch.py world:=/root/linorobot2_ws/install/linorobot2_gazebo/share/linorobot2_gazebo/worlds/${WORLD:-playground}.world
     devices:
       - /dev:/dev
 
@@ -63,13 +64,31 @@ services:
       ros2 launch linorobot2_navigation slam.launch.py
       rviz:=false
 
+  slam-sim:
+    container_name: slam-sim
+    extends: dev
+    command: >
+      ros2 launch linorobot2_navigation slam.launch.py
+      rviz:=true
+      sim:=true
+
   navigate:
     container_name: navigate
     extends: dev
     command: >
       ros2 launch linorobot2_navigation navigation.launch.py
-      map:=/root/linorobot2_ws/src/linorobot2/linorobot2_navigation/maps/playground.yaml
+      map:=/root/linorobot2_ws/src/linorobot2/linorobot2_navigation/maps/${WORLD:-playground}.yaml
       rviz:=false
+      sim:=false
+
+  navigate-sim:
+    container_name: navigate-sim
+    extends: dev
+    command: >
+      ros2 launch linorobot2_navigation navigation.launch.py
+      map:=/root/linorobot2_ws/src/linorobot2/linorobot2_navigation/maps/${WORLD:-playground}.yaml
+      rviz:=true
+      sim:=true
 
   save-map:
     container_name: save-map
@@ -94,6 +113,31 @@ services:
     container_name: debug
     extends: dev
     command: sleep infinity
+    volumes:
+    - ../.:/root/linorobot2_ws/src/linorobot2
+
+  webtop:
+    image: lscr.io/linuxserver/webtop:latest
+    container_name: webtop
+    security_opt:
+      - seccomp:unconfined
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Etc/UTC
+      - SUBFOLDER=/
+      - TITLE=Webtop
+      - DISPLAY=:200
+    network_mode: host
+    volumes:
+      - /path/to/data:/config
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+      - $HOME/.Xauthority:/root/.Xauthority
+    devices:
+      - /dev/dri:/dev/dri
+    shm_size: "1gb"
+    restart: unless-stopped
 
   kasmvnc:
     runtime: ${RUNTIME}

@@ -30,6 +30,10 @@ def generate_launch_description():
         [FindPackageShare('linorobot2_description'), 'launch', 'description.launch.py']
     )
 
+    vision_node_launch_path = PathJoinSubstitution(
+        [FindPackageShare('linorobot2_bringup'), 'launch', 'vision.launch.py']
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument(
             name='base_serial_port', 
@@ -55,6 +59,12 @@ def generate_launch_description():
             description='micro-ROS udp/tcp port number'
         ),
 
+        DeclareLaunchArgument(
+            name='webcam_enabled',
+            default_value='false',
+            description='Enable webcam sensor'
+        ),
+
         Node(
             condition=LaunchConfigurationEquals('micro_ros_transport', 'serial'),
             package='micro_ros_agent',
@@ -65,18 +75,24 @@ def generate_launch_description():
         ),
 
         Node(
-            condition=LaunchConfigurationEquals('micro_ros_transport', 'udp4'),
+            condition=LaunchConfigurationNotEquals('micro_ros_transport', 'serial'),
             package='micro_ros_agent',
             executable='micro_ros_agent',
             name='micro_ros_agent',
             output='screen',
             arguments=[LaunchConfiguration('micro_ros_transport'), '--port', LaunchConfiguration('micro_ros_port')]
         ),
-    
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(sensors_launch_path)
+        ),
+
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(description_launch_path)
         ),
+
         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(sensors_launch_path),
-        )
+            PythonLaunchDescriptionSource(vision_node_launch_path),
+            condition=IfCondition(LaunchConfiguration('webcam_enabled'))
+        ),
     ])

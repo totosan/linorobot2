@@ -75,7 +75,7 @@ def generate_launch_description():
         ),
 
         Node(
-            package='gazebo_ros',
+            package='ros_gz_sim',
             executable='spawn_entity.py',
             name='urdf_spawner',
             output='screen',

@@ -66,15 +66,18 @@ def generate_launch_description():
     depth_launch_path = PathJoinSubstitution(
         [FindPackageShare('linorobot2_bringup'), 'launch', 'depth.launch.py']
     )
+    
+    webcam_launch_path = PathJoinSubstitution(
+        [FindPackageShare('linorobot2_bringup'), 'launch', 'webcam.launch.py']
+    )
 
     return LaunchDescription([
         GroupAction(
             actions=[
-                SetRemap(src=point_cloud_topics[depth_sensor_name], dst='/camera/depth/color/points'),
                 IncludeLaunchDescription(
-                    PythonLaunchDescriptionSource(depth_launch_path),
-                    condition=IfCondition(PythonExpression(['"" != "', depth_sensor_name, '"'])),
-                    launch_arguments={'sensor': depth_sensor_name}.items()   
+                    PythonLaunchDescriptionSource(webcam_launch_path),
+                    #condition=IfCondition(PythonExpression(['"webcam" == "', depth_sensor_name, '"'])),
+                    launch_arguments={'sensor': 'webcam'}.items()
                 )
             ]
         ),

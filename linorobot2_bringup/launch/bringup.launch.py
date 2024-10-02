@@ -62,6 +62,12 @@ def generate_launch_description():
             default_value='false',
             description='Launch extra launch file'
         ),
+        
+        DeclareLaunchArgument(
+            name='webcam_enabled', 
+            default_value='true',
+            description='Launch vision node'
+        ),
 
         DeclareLaunchArgument(
             name='base_serial_port', 
@@ -128,12 +134,13 @@ def generate_launch_description():
         ),
 
         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(default_robot_launch_path),
-            condition=UnlessCondition(LaunchConfiguration("custom_robot")),
-            launch_arguments={
-                'base_serial_port': LaunchConfiguration("base_serial_port")
-            }.items()
-        ),
+                    PythonLaunchDescriptionSource(default_robot_launch_path),
+                    condition=UnlessCondition(LaunchConfiguration("custom_robot")),
+                    launch_arguments={
+                        'base_serial_port': LaunchConfiguration("base_serial_port"),
+                        'webcam_enabled': LaunchConfiguration("webcam_enabled")
+                    }.items()
+                ),
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(extra_launch_path),

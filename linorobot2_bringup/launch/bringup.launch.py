@@ -111,6 +111,12 @@ def generate_launch_description():
             description='Use Joystick'
         ),
 
+        DeclareLaunchArgument(
+            name='micro_ros_enabled', 
+            default_value='true',
+            description='Enable micro-ROS'
+        ),
+
         Node(
             condition=IfCondition(LaunchConfiguration("madgwick")),
             package='imu_filter_madgwick',
@@ -138,7 +144,8 @@ def generate_launch_description():
                     condition=UnlessCondition(LaunchConfiguration("custom_robot")),
                     launch_arguments={
                         'base_serial_port': LaunchConfiguration("base_serial_port"),
-                        'webcam_enabled': LaunchConfiguration("webcam_enabled")
+                        'webcam_enabled': LaunchConfiguration("webcam_enabled"),
+                        'micro_ros_enabled': LaunchConfiguration("micro_ros_enabled")
                     }.items()
                 ),
 
@@ -150,5 +157,8 @@ def generate_launch_description():
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(custom_robot_launch_path),
             condition=IfCondition(LaunchConfiguration("custom_robot")),
+            launch_arguments={
+                'micro_ros_enabled': LaunchConfiguration("micro_ros_enabled")
+            }.items()
         )
     ])

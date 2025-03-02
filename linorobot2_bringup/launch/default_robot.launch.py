@@ -65,8 +65,14 @@ def generate_launch_description():
             description='Enable webcam sensor'
         ),
 
+        DeclareLaunchArgument(
+            name='micro_ros_enabled', 
+            default_value='true',
+            description='Enable micro-ROS'
+        ),
+
         Node(
-            condition=LaunchConfigurationEquals('micro_ros_transport', 'serial'),
+            condition=IfCondition(PythonExpression(["'", LaunchConfiguration('micro_ros_transport'), "' == 'serial' and '", LaunchConfiguration('micro_ros_enabled'), "' == 'true'"])),
             package='micro_ros_agent',
             executable='micro_ros_agent',
             name='micro_ros_agent',
@@ -75,7 +81,7 @@ def generate_launch_description():
         ),
 
         Node(
-            condition=LaunchConfigurationNotEquals('micro_ros_transport', 'serial'),
+            condition=IfCondition(PythonExpression(["'", LaunchConfiguration('micro_ros_transport'), "' != 'serial' and '", LaunchConfiguration('micro_ros_enabled'), "' == 'true'"])),
             package='micro_ros_agent',
             executable='micro_ros_agent',
             name='micro_ros_agent',
@@ -84,7 +90,8 @@ def generate_launch_description():
         ),
 
         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(sensors_launch_path)
+            PythonLaunchDescriptionSource(sensors_launch_path),
+            launch_arguments={'webcam_enabled': LaunchConfiguration('webcam_enabled')}.items()
         ),
 
         IncludeLaunchDescription(

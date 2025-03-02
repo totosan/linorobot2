@@ -11,10 +11,11 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             name='sensor', 
-            default_value='logitech',
+            default_value='webcam',
             description='WebCam Logitech C920'
         ),
         Node(
+            condition=LaunchConfigurationEquals('sensor', 'webcam'),
             package='usb_cam',
             executable='usb_cam_node_exe',
             name='webcam',

@@ -40,7 +40,7 @@ def launch_rplidar(context, *args, **kwargs):
                 [FindPackageShare('sllidar_ros2'), 'launch', launch_file]
             )),
             launch_arguments={
-                'serial_port': '/dev/rplidar', 
+                'serial_port': '/dev/ttyUSB0', 
                 'frame_id': LaunchConfiguration('frame_id'),
             }.items()   
         )]
@@ -142,21 +142,21 @@ def generate_launch_description():
             }]
         ),
 
-        # Node(
-        #     condition=LaunchConfigurationEquals('sensor', 'rplidar'),
-        #     name='rplidar_composition',
-        #     package='rplidar_ros',
-        #     executable='rplidar_composition',
-        #     output='screen',
-        #     remappings=[('scan', LaunchConfiguration('topic_name'))],
-        #     parameters=[{
-        #         'serial_port': '/dev/ttyUSB0',
-        #         'serial_baudrate': 115200,  # A1 / A2
-        #         'frame_id': LaunchConfiguration('frame_id'),
-        #         'inverted': False,
-        #         'angle_compensate': True,
-        #     }],
-        # ),
+        Node(
+            condition=LaunchConfigurationEquals('sensor', 'rplidar'),
+            name='rplidar_composition',
+            package='rplidar_ros',
+            executable='rplidar_composition',
+            output='screen',
+            remappings=[('scan', LaunchConfiguration('topic_name'))],
+            parameters=[{
+                'serial_port': '/dev/ttyUSB0',
+                'serial_baudrate': 115200,  # A1 / A2
+                'frame_id': LaunchConfiguration('frame_id'),
+                'inverted': False,
+                'angle_compensate': True,
+            }],
+        ),
 
         Node( 
             condition=LaunchConfigurationEquals('sensor', 'xv11'),

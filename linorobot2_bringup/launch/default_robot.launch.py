@@ -30,16 +30,20 @@ def generate_launch_description():
         [FindPackageShare('linorobot2_description'), 'launch', 'description.launch.py']
     )
 
+    vision_node_launch_path = PathJoinSubstitution(
+        [FindPackageShare('linorobot2_bringup'), 'launch', 'vision.launch.py']
+    )
+
     return LaunchDescription([
         DeclareLaunchArgument(
             name='base_serial_port', 
-            default_value='/dev/ttyACM0',
+            default_value='/dev/ttyUSB1',
             description='Linorobot Base Serial Port'
         ),
 
         DeclareLaunchArgument(
             name='micro_ros_baudrate', 
-            default_value='115200',
+            default_value='921600',
             description='micro-ROS baudrate'
         ),
 
@@ -55,8 +59,20 @@ def generate_launch_description():
             description='micro-ROS udp/tcp port number'
         ),
 
+        DeclareLaunchArgument(
+            name='webcam_enabled',
+            default_value='false',
+            description='Enable webcam sensor'
+        ),
+
+        DeclareLaunchArgument(
+            name='micro_ros_enabled', 
+            default_value='true',
+            description='Enable micro-ROS'
+        ),
+
         Node(
-            condition=LaunchConfigurationEquals('micro_ros_transport', 'serial'),
+            condition=IfCondition(PythonExpression(["'", LaunchConfiguration('micro_ros_transport'), "' == 'serial' and '", LaunchConfiguration('micro_ros_enabled'), "' == 'true'"])),
             package='micro_ros_agent',
             executable='micro_ros_agent',
             name='micro_ros_agent',
@@ -65,18 +81,25 @@ def generate_launch_description():
         ),
 
         Node(
-            condition=LaunchConfigurationEquals('micro_ros_transport', 'udp4'),
+            condition=IfCondition(PythonExpression(["'", LaunchConfiguration('micro_ros_transport'), "' != 'serial' and '", LaunchConfiguration('micro_ros_enabled'), "' == 'true'"])),
             package='micro_ros_agent',
             executable='micro_ros_agent',
             name='micro_ros_agent',
             output='screen',
             arguments=[LaunchConfiguration('micro_ros_transport'), '--port', LaunchConfiguration('micro_ros_port')]
         ),
-    
+
+        IncludeLaunchDescription(
+            PythonLaunchDescriptionSource(sensors_launch_path),
+            launch_arguments={'webcam_enabled': LaunchConfiguration('webcam_enabled')}.items()
+        ),
+
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(description_launch_path)
         ),
+
         IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(sensors_launch_path),
-        )
+            PythonLaunchDescriptionSource(vision_node_launch_path),
+            condition=IfCondition(LaunchConfiguration('webcam_enabled'))
+        ),
     ])

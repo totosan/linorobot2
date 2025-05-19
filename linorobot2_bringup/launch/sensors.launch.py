@@ -15,11 +15,13 @@
 import os
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, GroupAction
-from launch.substitutions import PathJoinSubstitution, PythonExpression
+from launch.substitutions import PathJoinSubstitution, PythonExpression, LaunchConfiguration
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.substitutions import FindPackageShare
 from launch.conditions import IfCondition
 from launch_ros.actions import Node, SetRemap
+from launch.actions import DeclareLaunchArgument
+from launch.conditions import LaunchConfigurationEquals
 
 
 def generate_launch_description():
@@ -66,15 +68,25 @@ def generate_launch_description():
     depth_launch_path = PathJoinSubstitution(
         [FindPackageShare('linorobot2_bringup'), 'launch', 'depth.launch.py']
     )
+    
+    webcam_launch_path = PathJoinSubstitution(
+        [FindPackageShare('linorobot2_bringup'), 'launch', 'webcam.launch.py']
+    )
+
+    webcam_enabled = LaunchConfiguration('webcam_enabled')
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            name='webcam_enabled', 
+            default_value='false',
+            description='start webcam node'
+        ),
         GroupAction(
             actions=[
-                SetRemap(src=point_cloud_topics[depth_sensor_name], dst='/camera/depth/color/points'),
                 IncludeLaunchDescription(
-                    PythonLaunchDescriptionSource(depth_launch_path),
-                    condition=IfCondition(PythonExpression(['"" != "', depth_sensor_name, '"'])),
-                    launch_arguments={'sensor': depth_sensor_name}.items()   
+                    PythonLaunchDescriptionSource(webcam_launch_path),
+                    condition=IfCondition(PythonExpression(['"true" == "', webcam_enabled, '"'])),
+                    launch_arguments={'sensor': 'webcam'}.items()
                 )
             ]
         ),
@@ -95,4 +107,3 @@ def generate_launch_description():
         ) 
     ])
 
-   

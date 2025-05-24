@@ -2,24 +2,31 @@
 
 import rclpy
 from rclpy.node import Node
-import cv2
-from cv_bridge import CvBridge, CvBridgeError
-from pyquaternion import Quaternion
-import yaml
-import numpy as np
-from sensor_msgs.msg import Image, LaserScan, PointCloud2
-import laser_geometry.laser_geometry as lg # Re-enabled
+from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
+from sensor_msgs.msg import Image, CompressedImage, LaserScan, PointCloud2
 import sensor_msgs_py.point_cloud2 as pc2
-from message_filters import ApproximateTimeSynchronizer, Subscriber
-from sensor_msgs.msg import CompressedImage
-import requests
-import traceback # Added for detailed error logging
+from cv_bridge import CvBridge
+import cv2
+import numpy as np
+import message_filters
+import tf2_ros
+from tf2_ros import TransformException
+from tf_transformations import euler_from_quaternion, quaternion_from_euler
+from geometry_msgs.msg import TransformStamped, Quaternion as GeoQuaternion # Added GeoQuaternion for clarity if needed elsewhere
+from laser_geometry import LaserProjection
+import yaml
+import os
+import zmq
+import json
+import traceback
+from quaternion import quaternion as Quaternion # Changed import for Quaternion
+from quaternion import as_rotation_matrix # Added import for as_rotation_matrix
 
 class ReprojectionNode(Node):
     def __init__(self):
         super().__init__('reprojection')
         self.bridge = CvBridge()
-        self.lp = lg.LaserProjection() # Re-enabled
+        self.lp = LaserProjection()
 
         self.scan_topic = self.declare_parameter("scan_topic", "/scan").value
         self.image_topic = self.declare_parameter("image_topic", "/image_raw").value
@@ -37,11 +44,59 @@ class ReprojectionNode(Node):
         self.load_calibration()
         self.load_camera_config()
 
+        # ZeroMQ PUSH socket for sending images
+        self.image_sender_endpoint = self.declare_parameter(
+            "image_sender_endpoint", "tcp://localhost:5555"  # Changed to TCP
+        ).get_parameter_value().string_value
+        
+        # ZeroMQ REQ socket for receiving detection results
+        self.results_receiver_endpoint = self.declare_parameter(
+            "results_receiver_endpoint", "tcp://localhost:5556"  # Changed to TCP
+        ).get_parameter_value().string_value
+
+        self.get_logger().info(f"ZMQ Image PUSH Endpoint: {self.image_sender_endpoint}")
+        self.get_logger().info(f"ZMQ Results REQ Endpoint: {self.results_receiver_endpoint}")
+
+        try:
+            self.zmq_context = zmq.Context()
+            
+            # PUSH socket for sending images
+            self.image_push_socket = self.zmq_context.socket(zmq.PUSH)
+            # Set LINGER to 0 to prevent hanging on close if messages are queued
+            self.image_push_socket.setsockopt(zmq.LINGER, 0) 
+            # Set a send timeout (e.g., 1 second) to prevent indefinite blocking
+            self.image_push_socket.setsockopt(zmq.SNDTIMEO, 1000) 
+            self.image_push_socket.connect(self.image_sender_endpoint)
+            self.get_logger().info(f"ZMQ PUSH socket connected to {self.image_sender_endpoint}")
+
+            # REQ socket for results
+            self.results_req_socket = self.zmq_context.socket(zmq.REQ)
+            self.results_req_socket.setsockopt(zmq.LINGER, 0) # Prevent hanging on close
+            self.results_req_socket.setsockopt(zmq.RCVTIMEO, 2000) # Timeout for receive
+            self.results_req_socket.connect(self.results_receiver_endpoint)
+            self.get_logger().info(f"ZMQ REQ socket connected to {self.results_receiver_endpoint}")
+
+        except zmq.error.ZMQError as e:
+            self.get_logger().error(f"Failed to initialize ZeroMQ sockets: {e}")
+            # Handle error appropriately, maybe rclpy.shutdown() or raise an exception
+            # For now, just log and the node might not function correctly.
+            # Consider setting a flag to prevent operations if ZMQ fails.
+            self.image_push_socket = None 
+            self.results_req_socket = None
+            self.zmq_context = None # Or handle context termination carefully
+        except Exception as e:
+            self.get_logger().error(f"An unexpected error occurred during ZMQ initialization: {e}")
+            self.image_push_socket = None
+            self.results_req_socket = None
+            self.zmq_context = None
+
+
         self.pub = self.create_publisher(Image, "/reprojection", 10)
         self.marked_scan_pub = self.create_publisher(LaserScan, "/marked_scan", 10) # New publisher
-        self.scan_sub = Subscriber(self, LaserScan, self.scan_topic)
-        self.image_sub = Subscriber(self, CompressedImage, self.image_topic)
-        self.ts = ApproximateTimeSynchronizer([self.scan_sub, self.image_sub], 10, self.time_diff)
+        # Corrected message_filters imports and usage
+        self.scan_sub = message_filters.Subscriber(self, LaserScan, self.scan_topic)
+        self.image_sub = message_filters.Subscriber(self, CompressedImage, self.image_topic)
+        self.ts = message_filters.ApproximateTimeSynchronizer([self.scan_sub, self.image_sub], 10, self.time_diff)
         self.ts.registerCallback(self.callback)
 
         # print the init setup:
@@ -73,16 +128,25 @@ class ReprojectionNode(Node):
             tx = float(data[4])
             ty = float(data[5])
             tz = float(data[6])
-        q = Quaternion(qw, qx, qy, qz).transformation_matrix
-        q[0, 3] = tx
-        q[1, 3] = ty
-        q[2, 3] = tz
+        
+        # Create a quaternion object
+        quat_obj = Quaternion(qw, qx, qy, qz)
+        # Convert quaternion to rotation matrix
+        rotation_matrix = as_rotation_matrix(quat_obj)
+
+        # Create the 4x4 transformation matrix
+        q_transform = np.eye(4)
+        q_transform[:3, :3] = rotation_matrix
+        q_transform[0, 3] = tx
+        q_transform[1, 3] = ty
+        q_transform[2, 3] = tz
+        
         print("Extrinsic parameter - camera to laser")
-        print(q)
-        self.tvec = q[:3, 3]
-        rot_mat = q[:3, :3]
+        print(q_transform)
+        self.tvec = q_transform[:3, 3]
+        rot_mat = q_transform[:3, :3]
         self.rvec, _ = cv2.Rodrigues(rot_mat)
-        self.q = q
+        self.q = q_transform
 
     def load_camera_config(self):
         with open(self.config_file, 'r') as f:
@@ -131,33 +195,95 @@ class ReprojectionNode(Node):
         img = self.bridge.compressed_imgmsg_to_cv2(image)
         img_height, img_width = img.shape[:2]
 
-        # Object detection via API
+        # Object detection via ZeroMQ
         _, img_encoded = cv2.imencode('.jpg', img)
-        files = {'image': ('image.jpg', img_encoded.tobytes(), 'image/jpeg')}
         
+        if img_encoded is None:
+            self.get_logger().error("Failed to encode image to JPEG for ZMQ. Skipping ZMQ communication for this frame.")
+            # Publish original image and default scan if encoding fails, then return
+            self.pub.publish(self.bridge.cv2_to_imgmsg(img))
+            # Consider publishing a default/empty marked_scan_msg as well
+            # For now, just returning to avoid further errors in this callback iteration
+            return
+
+        img_bytes_to_send = img_encoded.tobytes()
+        if not img_bytes_to_send:
+            self.get_logger().error("Encoded image is empty. Skipping ZMQ communication for this frame.")
+            self.pub.publish(self.bridge.cv2_to_imgmsg(img))
+            return
+
         detections = []
         try:
-            response = requests.post(self.api_url, files=files, timeout=2) # Added timeout
-            response.raise_for_status()  # Raise an exception for HTTP errors (4xx or 5xx)
-            api_response = response.json()
+            self.get_logger().debug(f"Attempting to send {len(img_bytes_to_send)} image bytes via ZMQ PUSH.")
+            # Send image
+            self.image_push_socket.send(img_bytes_to_send)
+            self.get_logger().debug(f"Successfully sent {len(img_bytes_to_send)} image bytes via ZMQ PUSH.")
+            
+            # Request and receive detections
+            self.get_logger().debug("Sending 'detect' signal via ZMQ REQ.")
+            self.results_req_socket.send_string("detect") # Send a simple request
+            self.get_logger().debug("'detect' signal sent. Polling for response...")
+            
+            # Wait for the response
+            poller = zmq.Poller()
+            poller.register(self.results_req_socket, zmq.POLLIN)
+            
+            # Wait for 1 second (1000ms)
+            if poller.poll(1000): 
+                detections_payload = self.results_req_socket.recv_json()
 
-            # --- updated parsing logic ---
-            if isinstance(api_response, dict):
-                if 'detections' in api_response:           # new: expected response shape
-                    detections = api_response['detections']
-                elif 'box' in api_response:                # single-detection shorthand
-                    detections = [api_response]
-            elif isinstance(api_response, list):
-                detections = api_response
-            # --------------------------------
+                if isinstance(detections_payload, dict):
+                    if 'detections' in detections_payload:
+                        detections = detections_payload['detections']
+                    # Handle potential error message from server
+                    elif 'error' in detections_payload:
+                        self.get_logger().error(f"Detection service error: {detections_payload['error']}")
+                        detections = []
+                    else: # single-detection shorthand or other dict format
+                        detections = [detections_payload] if 'box' in detections_payload else []
+                elif isinstance(detections_payload, list):
+                    detections = detections_payload
+                else:
+                    self.get_logger().warn(f"Received unexpected detection format: {type(detections_payload)}")
+                    detections = []
+            else:
+                self.get_logger().warn("Timeout waiting for detection results from ZMQ REP socket.")
+                # Attempt to recover the REQ socket
+                self.get_logger().info("Attempting to recover ZMQ REQ socket...")
+                self.results_req_socket.close()
+                self.results_req_socket = self.zmq_context.socket(zmq.REQ)
+                self.results_req_socket.setsockopt(zmq.LINGER, 0) # Set LINGER to 0 to prevent hanging on close
+                self.results_req_socket.setsockopt(zmq.RCVTIMEO, 2000) # Set a timeout for receive operations
+                self.results_req_socket.connect(self.results_receiver_endpoint) # Corrected endpoint
+                self.get_logger().info(f"ZMQ REQ socket reconnected to {self.results_receiver_endpoint}")
 
-        except requests.exceptions.Timeout:
-            self.get_logger().warn(f"API request timed out: {self.api_url}")
-        except requests.exceptions.RequestException as e:
-            self.get_logger().error(f"API request failed: {e}")
-        except ValueError: # Includes JSONDecodeError
-            self.get_logger().error(f"Failed to decode JSON response from API.")
-
+        except zmq.error.Again as e: # Timeout
+            # This specifically catches timeout on results_req_socket.recv_json() due to RCVTIMEO
+            self.get_logger().warn(f"ZeroMQ REQ socket timeout waiting for detection results: {e}")
+            detections = [] # Proceed without detections
+        except zmq.error.ZMQError as e:
+            # This can catch other ZMQ errors, including potential send errors if not EAGAIN
+            self.get_logger().error(f"ZeroMQ communication error: {e} (errno: {e.errno if hasattr(e, 'errno') else 'N/A'})")
+            if hasattr(e, 'errno') and e.errno == zmq.EFSM:
+                 self.get_logger().error("ZMQ EFSM error: REQ socket might be in a bad state (e.g. send/recv out of sequence). Attempting recovery.")
+                 # Attempt recovery for REQ socket specifically if it's an FSM error
+                 try:
+                    self.results_req_socket.close()
+                    self.results_req_socket = self.zmq_context.socket(zmq.REQ)
+                    self.results_req_socket.setsockopt(zmq.LINGER, 0)
+                    self.results_req_socket.setsockopt(zmq.RCVTIMEO, 2000)
+                    self.results_req_socket.connect(self.results_receiver_endpoint)
+                    self.get_logger().info(f"ZMQ REQ socket reconnected after EFSM error to {self.results_receiver_endpoint}")
+                 except Exception as recovery_e:
+                    self.get_logger().error(f"Failed to recover REQ socket after EFSM error: {recovery_e}")
+            detections = [] # Proceed without detections
+        except json.JSONDecodeError as e:
+            self.get_logger().error(f"Failed to decode JSON response from ZeroMQ: {e}")
+            detections = []
+        except Exception as e:
+            self.get_logger().error(f"Error during ZeroMQ detection processing: {e}\\nTraceback: {traceback.format_exc()}")
+            detections = []
+        
         # --- Use laser_geometry to project laser scan to PointCloud2 ---
         try:
             self.get_logger().debug("Starting laser scan processing.")
@@ -499,8 +625,16 @@ class ReprojectionNode(Node):
         self.marked_scan_pub.publish(marked_scan_msg)
         # --- End New ---
 
-    def destroy(self):
-        self.bridge = None
+    def destroy_node(self):
+        self.get_logger().info("Cleaning up ZeroMQ resources...")
+        if hasattr(self, 'image_push_socket'):
+            self.image_push_socket.close()
+        if hasattr(self, 'results_req_socket'):
+            self.results_req_socket.close()
+        if hasattr(self, 'zmq_context'):
+            self.zmq_context.term()
+        self.get_logger().info("ZeroMQ resources cleaned up.")
+        super().destroy_node()
 
 def main(args=None):
     rclpy.init(args=args)
@@ -510,7 +644,6 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        node.destroy() # Call the destroy method to release resources
         node.destroy_node()
         if rclpy.ok():
             rclpy.shutdown()

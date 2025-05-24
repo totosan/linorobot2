@@ -25,6 +25,7 @@ def generate_launch_description():
                 ])},
                 {'laser_point_radius': 3},
                 {'time_diff': 1.0}
-            ]
+            ],
+            #arguments=['--ros-args', '--log-level', 'debug']
         )
     ])

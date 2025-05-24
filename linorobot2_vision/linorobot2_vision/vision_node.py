@@ -8,17 +8,18 @@ from pyquaternion import Quaternion
 import yaml
 import numpy as np
 from sensor_msgs.msg import Image, LaserScan, PointCloud2
-import laser_geometry.laser_geometry as lg
+import laser_geometry.laser_geometry as lg # Re-enabled
 import sensor_msgs_py.point_cloud2 as pc2
 from message_filters import ApproximateTimeSynchronizer, Subscriber
 from sensor_msgs.msg import CompressedImage
 import requests
+import traceback # Added for detailed error logging
 
 class ReprojectionNode(Node):
     def __init__(self):
         super().__init__('reprojection')
         self.bridge = CvBridge()
-        self.lp = lg.LaserProjection()
+        self.lp = lg.LaserProjection() # Re-enabled
 
         self.scan_topic = self.declare_parameter("scan_topic", "/scan").value
         self.image_topic = self.declare_parameter("image_topic", "/image_raw").value
@@ -37,6 +38,7 @@ class ReprojectionNode(Node):
         self.load_camera_config()
 
         self.pub = self.create_publisher(Image, "/reprojection", 10)
+        self.marked_scan_pub = self.create_publisher(LaserScan, "/marked_scan", 10) # New publisher
         self.scan_sub = Subscriber(self, LaserScan, self.scan_topic)
         self.image_sub = Subscriber(self, CompressedImage, self.image_topic)
         self.ts = ApproximateTimeSynchronizer([self.scan_sub, self.image_sub], 10, self.time_diff)
@@ -110,14 +112,14 @@ class ReprojectionNode(Node):
         R = T_cam_world[:3, :3]
         t = T_cam_world[:3, 3]
         proj_mat = np.dot(K, np.hstack((R, t[:, np.newaxis])))
+        # Ensure T_world_pc is 2D array for hstack
+        if T_world_pc.ndim == 1:
+            T_world_pc = T_world_pc.reshape(1, -1)
         xyz_hom = np.hstack((T_world_pc, np.ones((T_world_pc.shape[0], 1))))
         xy_hom = np.dot(proj_mat, xyz_hom.T).T
         z = xy_hom[:, -1]
         z = np.asarray(z).squeeze()
         return z
-
-    def extract(self, point):
-        return [point[0], point[1], point[2]]
 
     def callback(self, scan, image):
         # Convert ROS2 builtin time to floating-point seconds to get an accurate difference
@@ -156,97 +158,258 @@ class ReprojectionNode(Node):
         except ValueError: # Includes JSONDecodeError
             self.get_logger().error(f"Failed to decode JSON response from API.")
 
-        # First, project and filter all laser points
-        cloud = self.lp.projectLaser(scan)
-        points = pc2.read_points(cloud)
-        objPoints = np.array(list(map(self.extract, points)))
+        # --- Use laser_geometry to project laser scan to PointCloud2 ---
+        try:
+            self.get_logger().debug("Starting laser scan processing.")
+            # Using laser_geometry to project laser scan to 3D points
+            cloud = self.lp.projectLaser(scan)
+            self.get_logger().debug("Laser scan projected to PointCloud2.")
+            
+            # Extract x, y, z from cloud but track indices manually
+            points_data = list(pc2.read_points(cloud, field_names=("x", "y", "z"), skip_nans=True))
+            self.get_logger().debug(f"Extracted {len(points_data)} points from PointCloud2.")
+            
+            if not points_data:
+                self.get_logger().debug("No valid laser points from scan to process for reprojection.")
+                self.pub.publish(self.bridge.cv2_to_imgmsg(img)) # Publish original image
+                marked_scan_msg = LaserScan()
+                marked_scan_msg.header = scan.header
+                marked_scan_msg.angle_min = scan.angle_min
+                marked_scan_msg.angle_max = scan.angle_max
+                marked_scan_msg.angle_increment = scan.angle_increment
+                marked_scan_msg.time_increment = scan.time_increment
+                marked_scan_msg.scan_time = scan.scan_time
+                marked_scan_msg.range_min = scan.range_min
+                marked_scan_msg.range_max = scan.range_max
+                marked_scan_msg.ranges = list(scan.ranges)
+                marked_scan_msg.intensities = [0.0] * len(scan.ranges)
+                self.marked_scan_pub.publish(marked_scan_msg)
+                img = None
+                return
+            
+            # Map point cloud points back to original scan indices
+            # This is an approximation based on angle calculation
+            self.get_logger().debug("Processing points_data to create objPoints_in_laser_frame.")
+            valid_points_xyz = []
+            for idx, p_candidate in enumerate(points_data):
+                if hasattr(p_candidate, '__getitem__') and hasattr(p_candidate, '__len__') and len(p_candidate) == 3:
+                    try:
+                        # Ensure elements can be converted to float for numpy array
+                        x = float(p_candidate[0])
+                        y = float(p_candidate[1])
+                        z = float(p_candidate[2])
+                        valid_points_xyz.append((x, y, z))
+                    except (ValueError, TypeError) as ve:
+                        self.get_logger().warn(f"Point at index {idx} has non-numeric data: {p_candidate}, error: {ve}. Skipping.")
+                else:
+                    self.get_logger().warn(f"Point at index {idx} is malformed (not a 3-element sequence): {p_candidate}, type: {type(p_candidate)}. Skipping.")
+            
+            if not valid_points_xyz:
+                self.get_logger().warn("No valid XYZ points extracted from PointCloud2 after filtering. objPoints_in_laser_frame will be empty.")
+                objPoints_in_laser_frame = np.array([]) 
+            else:
+                objPoints_in_laser_frame = np.array(valid_points_xyz)
+            
+            self.get_logger().debug(f"objPoints_in_laser_frame shape after processing: {objPoints_in_laser_frame.shape}")
 
+            # Calculate angles from x,y coordinates of points (atan2(y,x))
+            if objPoints_in_laser_frame.shape[0] == 0:
+                self.get_logger().debug("objPoints_in_laser_frame is empty. Initializing point_angles as empty.")
+                point_angles = np.array([])
+            elif objPoints_in_laser_frame.shape[0] == 1:
+                self.get_logger().debug("Calculating angle for a single point.")
+                y_coord = objPoints_in_laser_frame[0, 1]
+                x_coord = objPoints_in_laser_frame[0, 0]
+                angle_scalar = np.arctan2(y_coord, x_coord)
+                point_angles = np.array([angle_scalar]) 
+            else: # objPoints_in_laser_frame.shape[0] > 1
+                self.get_logger().debug("Calculating angles for multiple points.")
+                point_angles = np.arctan2(objPoints_in_laser_frame[:, 1], objPoints_in_laser_frame[:, 0])
+
+            self.get_logger().debug(f"Initial point_angles shape: {point_angles.shape}, size: {point_angles.size}")
+
+            # At this point, point_angles should be 1D (possibly empty if objPoints_in_laser_frame was empty)
+            point_angles = np.atleast_1d(point_angles)
+            self.get_logger().debug(f"point_angles shape after atleast_1d: {point_angles.shape}, size: {point_angles.size}")
+            
+            # Normalize angles to be in the same range as scan angles
+            if point_angles.size > 0: # Check if there are any angles to normalize
+                if point_angles.size == 1:
+                    self.get_logger().debug(f"Normalizing single angle: {point_angles[0]}")
+                    while point_angles[0] < scan.angle_min:
+                        point_angles[0] += 2 * np.pi
+                    while point_angles[0] > scan.angle_max:
+                        point_angles[0] -= 2 * np.pi
+                    self.get_logger().debug(f"Normalized single angle: {point_angles[0]}")
+                elif point_angles.size > 1:
+                    self.get_logger().debug("Normalizing multiple angles.")
+                    # Handle angles less than minimum
+                    mask_lt = point_angles < scan.angle_min
+                    while np.any(mask_lt):
+                        point_angles[mask_lt] += 2 * np.pi
+                        mask_lt = point_angles < scan.angle_min # Re-evaluate mask
+                    
+                    # Handle angles greater than maximum
+                    mask_gt = point_angles > scan.angle_max
+                    while np.any(mask_gt):
+                        point_angles[mask_gt] -= 2 * np.pi
+                        mask_gt = point_angles > scan.angle_max # Re-evaluate mask
+                    self.get_logger().debug("Finished normalizing multiple angles.")
+            else:
+                self.get_logger().debug("point_angles is empty, skipping normalization.")
+                
+            # Find closest index in scan for each point
+            # This line could fail if point_angles is empty, though the normalization block now checks for .size > 0
+            if point_angles.size > 0:
+                indices = np.round((point_angles - scan.angle_min) / scan.angle_increment).astype(int)
+                self.get_logger().debug(f"Calculated indices shape: {indices.shape}")
+                # Ensure indices are within valid range
+                indices = np.clip(indices, 0, len(scan.ranges) - 1)
+                self.get_logger().debug(f"Clipped indices shape: {indices.shape}")
+            else:
+                indices = np.array([], dtype=int) # Ensure indices is an empty int array if no angles
+                self.get_logger().debug("point_angles was empty, so indices is an empty array.")
+
+            # Now we have our tracked original indices
+            current_original_scan_indices = indices
+            self.get_logger().debug(f"current_original_scan_indices shape: {current_original_scan_indices.shape}")
+            self.get_logger().debug("Finished laser scan processing successfully.")
+            
+        except Exception as e:
+            self.get_logger().error(f"Error processing laser scan: {e}\\nTraceback: {traceback.format_exc()}") # Corrected logging
+            self.pub.publish(self.bridge.cv2_to_imgmsg(img)) # Publish original image
+            marked_scan_msg = LaserScan()
+            marked_scan_msg.header = scan.header
+            marked_scan_msg.angle_min = scan.angle_min
+            marked_scan_msg.angle_max = scan.angle_max
+            marked_scan_msg.angle_increment = scan.angle_increment
+            marked_scan_msg.time_increment = scan.time_increment
+            marked_scan_msg.scan_time = scan.scan_time
+            marked_scan_msg.range_min = scan.range_min
+            marked_scan_msg.range_max = scan.range_max
+            marked_scan_msg.ranges = list(scan.ranges) # Keep original ranges
+            marked_scan_msg.intensities = [0.0] * len(scan.ranges) # No intensity markings
+            self.marked_scan_pub.publish(marked_scan_msg)
+            img = None
+            return
+
+        # Filter points by max_laser_distance
         max_distance = self.max_laser_distance
-        if objPoints.shape[0] > 0:
-            objPoints = objPoints[np.linalg.norm(objPoints, axis=1) <= max_distance]
+        # Add a check for objPoints_in_laser_frame existence before trying to access its shape
+        if 'objPoints_in_laser_frame' in locals() and objPoints_in_laser_frame.shape[0] > 0:
+            self.get_logger().debug(f"Filtering by max_laser_distance. objPoints_in_laser_frame shape: {objPoints_in_laser_frame.shape}, current_original_scan_indices shape: {current_original_scan_indices.shape}")
+            # Ensure current_original_scan_indices is not empty and matches dimensions if we are to mask it
+            if current_original_scan_indices.size == objPoints_in_laser_frame.shape[0]:
+                norm_mask = np.linalg.norm(objPoints_in_laser_frame, axis=1) <= max_distance
+                objPoints_in_laser_frame = objPoints_in_laser_frame[norm_mask]
+                current_original_scan_indices = current_original_scan_indices[norm_mask]
+                self.get_logger().debug(f"After distance filtering: objPoints shape {objPoints_in_laser_frame.shape}, indices shape {current_original_scan_indices.shape}")
+            else:
+                self.get_logger().warn(f"Skipping distance filtering mask on current_original_scan_indices due to mismatch or empty: indices size {current_original_scan_indices.size}, objPoints shape {objPoints_in_laser_frame.shape[0]}")
+                # Filter only objPoints_in_laser_frame if indices are problematic
+                norm_mask = np.linalg.norm(objPoints_in_laser_frame, axis=1) <= max_distance
+                objPoints_in_laser_frame = objPoints_in_laser_frame[norm_mask]
+                # current_original_scan_indices might become stale here if not filtered, or we might need to re-calculate/invalidate
+                # For now, let's log and proceed, this might be a source of issues if indices are used later without re-evaluation
+                self.get_logger().debug(f"After distance filtering (only objPoints): objPoints shape {objPoints_in_laser_frame.shape}")
+
+        else:
+            self.get_logger().debug("objPoints_in_laser_frame is not available or empty before distance filtering.")
         
         img_points = np.array([])
-        if objPoints.shape[0] > 0:
+        # Add a check for objPoints_in_laser_frame existence
+        if 'objPoints_in_laser_frame' in locals() and objPoints_in_laser_frame.shape[0] > 0:
+            self.get_logger().debug(f"Projecting points to image. objPoints_in_laser_frame shape: {objPoints_in_laser_frame.shape}")
             if self.lens == 'pinhole':
-                img_points, _ = cv2.projectPoints(objPoints, self.rvec, self.tvec, self.K, self.D)
+                img_points, _ = cv2.projectPoints(objPoints_in_laser_frame, self.rvec, self.tvec, self.K, self.D)
             elif self.lens == 'fisheye':
-                objPoints_reshaped = np.reshape(objPoints, (1, objPoints.shape[0], objPoints.shape[1]))
+                objPoints_reshaped = np.reshape(objPoints_in_laser_frame, (1, objPoints_in_laser_frame.shape[0], objPoints_in_laser_frame.shape[1]))
                 img_points, _ = cv2.fisheye.projectPoints(objPoints_reshaped, self.rvec, self.tvec, self.K, self.D)
             img_points = np.squeeze(img_points)
-
-        objPoints_filtered = np.array([])
-        img_points_filtered = np.array([])
-
-        if img_points.ndim == 2 and img_points.shape[0] > 0:
-            valid_indices = np.where((img_points[:, 0] >= 0) & (img_points[:, 0] < img_width) &
-                                     (img_points[:, 1] >= 0) & (img_points[:, 1] < img_height))[0]
-            if len(valid_indices) > 0:
-                objPoints_filtered = objPoints[valid_indices]
-                img_points_filtered = img_points[valid_indices]
-        
-        if objPoints_filtered.shape[0] > 0:
-            Z = self.get_z(self.q, objPoints_filtered, self.K)
-            if Z.shape[0] == objPoints_filtered.shape[0]:
-                valid_z_indices = Z > 0
-                objPoints_filtered = objPoints_filtered[valid_z_indices]
-                img_points_filtered = img_points_filtered[valid_z_indices]
-            else:
-                objPoints_filtered = np.array([])
-                img_points_filtered = np.array([])
+            self.get_logger().debug(f"img_points shape after projection: {img_points.shape}")
         else:
-            objPoints_filtered = np.array([])
-            img_points_filtered = np.array([])
+            self.get_logger().debug("objPoints_in_laser_frame is not available or empty, skipping projection to image.")
+
+        objPoints_filtered_img_bounds = np.array([])
+        img_points_filtered_img_bounds = np.array([])
+        original_indices_filtered_img_bounds = np.array([])
+
+        if img_points.ndim == 2 and img_points.shape[0] > 0: # Ensure img_points is 2D
+            valid_indices_mask = (img_points[:, 0] >= 0) & (img_points[:, 0] < img_width) & \
+                                 (img_points[:, 1] >= 0) & (img_points[:, 1] < img_height)
+            if np.any(valid_indices_mask): # Check if any points are valid
+                objPoints_filtered_img_bounds = objPoints_in_laser_frame[valid_indices_mask]
+                img_points_filtered_img_bounds = img_points[valid_indices_mask]
+                original_indices_filtered_img_bounds = current_original_scan_indices[valid_indices_mask]
+        
+        objPoints_final_filtered = np.array([])
+        img_points_final_filtered = np.array([])
+        original_indices_final_filtered = np.array([])
+
+        if objPoints_filtered_img_bounds.shape[0] > 0:
+            Z = self.get_z(self.q, objPoints_filtered_img_bounds, self.K)
+            if Z.ndim > 0 and Z.shape[0] == objPoints_filtered_img_bounds.shape[0]: # Check Z is valid
+                valid_z_indices_mask = Z > 0
+                if np.any(valid_z_indices_mask):
+                    objPoints_final_filtered = objPoints_filtered_img_bounds[valid_z_indices_mask]
+                    img_points_final_filtered = img_points_filtered_img_bounds[valid_z_indices_mask]
+                    original_indices_final_filtered = original_indices_filtered_img_bounds[valid_z_indices_mask]
+            else: # Z calculation failed or returned scalar for single point
+                if Z > 0 and objPoints_filtered_img_bounds.shape[0] == 1: # single point case
+                    objPoints_final_filtered = objPoints_filtered_img_bounds
+                    img_points_final_filtered = img_points_filtered_img_bounds
+                    original_indices_final_filtered = original_indices_filtered_img_bounds
+
 
         # Initialize colors for all filtered laser points to default (green)
         point_colors = None
         default_point_color = (0, 255, 0) # Green
-        if img_points_filtered.ndim == 2 and img_points_filtered.shape[0] > 0:
-            point_colors = [default_point_color] * img_points_filtered.shape[0]
+        if img_points_final_filtered.ndim == 2 and img_points_final_filtered.shape[0] > 0:
+            point_colors = [default_point_color] * img_points_final_filtered.shape[0]
 
-        # Now, process detections and draw bounding boxes and distances
+        # For publishing marked scan
+        all_object_scan_indices = [] # List of (label, list_of_indices)
+
+        # Now, process detections and draw rectangles around grouped points with annotations
         for det in detections:
             if 'box' in det and 'label' in det and 'confidence' in det:
                 confidence = float(det['confidence'])
                 if confidence >= self.api_confidence_threshold:
-                    box = [int(coord) for coord in det['box']] # [x_min, y_min, x_max, y_max]
+                    box = [int(coord) for coord in det['box']] 
                     label = det['label']
 
                     if label not in self.label_colors:
                         self.label_colors[label] = np.random.randint(0, 255, size=3).tolist()
-                    color = self.label_colors[label] # This is the object's color
+                    color = self.label_colors[label]
 
-                    cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color, 2)
-                    text = f"{label}: {confidence:.2f}"
-                    cv2.putText(img, text, (box[0], box[1] - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
-
-                    # Calculate and display distance for the detected object
-                    if img_points_filtered.ndim == 2 and img_points_filtered.shape[0] > 0:
+                    if img_points_final_filtered.ndim == 2 and img_points_final_filtered.shape[0] > 0:
                         x_min_obj, y_min_obj, x_max_obj, y_max_obj = box[0], box[1], box[2], box[3]
+                        points_in_bbox_mask = (img_points_final_filtered[:, 0] >= x_min_obj) & \
+                                              (img_points_final_filtered[:, 0] <= x_max_obj) & \
+                                              (img_points_final_filtered[:, 1] >= y_min_obj) & \
+                                              (img_points_final_filtered[:, 1] <= y_max_obj)
                         
-                        points_in_bbox_mask = (img_points_filtered[:, 0] >= x_min_obj) & \
-                                              (img_points_filtered[:, 0] <= x_max_obj) & \
-                                              (img_points_filtered[:, 1] >= y_min_obj) & \
-                                              (img_points_filtered[:, 1] <= y_max_obj)
+                        laser_points_3d_in_bbox = objPoints_final_filtered[points_in_bbox_mask]
+                        img_points_in_bbox = img_points_final_filtered[points_in_bbox_mask]
+                        original_indices_in_bbox = original_indices_final_filtered[points_in_bbox_mask]
                         
-                        laser_points_3d_in_bbox = objPoints_filtered[points_in_bbox_mask]
-                        # Get original indices of points within the bounding box (relative to img_points_filtered)
-                        original_indices_in_bbox = np.where(points_in_bbox_mask)[0]
-                        
-                        if laser_points_3d_in_bbox.shape[0] > 0:
-                            points_for_distance_calc = laser_points_3d_in_bbox 
-                            indices_to_color_for_this_object = original_indices_in_bbox
+                        current_object_scan_indices = np.array([]) # For this specific object
 
-                            # Attempt to refine points if enough are available
+                        if laser_points_3d_in_bbox.shape[0] > 0:
+                            points_for_distance_calc = laser_points_3d_in_bbox
+                            indices_to_color_for_this_object_mask = np.ones(laser_points_3d_in_bbox.shape[0], dtype=bool) # Mask relative to laser_points_3d_in_bbox
+                            current_object_scan_indices = original_indices_in_bbox # Default to all in bbox
+
                             if laser_points_3d_in_bbox.shape[0] >= self.min_points_for_depth_filter:
                                 point_distances_initial = np.linalg.norm(laser_points_3d_in_bbox, axis=1)
                                 median_obj_dist = np.median(point_distances_initial)
-                                
-                                # refined_mask_for_bbox_subset is a mask for laser_points_3d_in_bbox (and for original_indices_in_bbox)
                                 refined_mask_for_bbox_subset = np.abs(point_distances_initial - median_obj_dist) <= self.object_depth_filter_tolerance
                                 
                                 if np.any(refined_mask_for_bbox_subset): 
                                     points_for_distance_calc = laser_points_3d_in_bbox[refined_mask_for_bbox_subset]
-                                    indices_to_color_for_this_object = original_indices_in_bbox[refined_mask_for_bbox_subset]
+                                    img_points_in_bbox = img_points_in_bbox[refined_mask_for_bbox_subset] # Update img_points_in_bbox as well
+                                    indices_to_color_for_this_object_mask = refined_mask_for_bbox_subset
+                                    current_object_scan_indices = original_indices_in_bbox[refined_mask_for_bbox_subset]
                                 else:
                                     self.get_logger().warn(
                                         f"Depth filter for object '{label}' (median: {median_obj_dist:.2f}m, "
@@ -255,35 +418,86 @@ class ReprojectionNode(Node):
                                         f"removed all points. Using all {laser_points_3d_in_bbox.shape[0]} points in bbox."
                                     )
                             
-                            # Update colors for the identified points
-                            if point_colors is not None and indices_to_color_for_this_object.shape[0] > 0:
-                                for idx in indices_to_color_for_this_object:
-                                    point_colors[idx] = color # Assign object's color
-                            
-                            # Calculate average distance using the (potentially refined) set of points
+                            if point_colors is not None: # Ensure point_colors is initialized
+                                # original_indices_in_bbox are indices into objPoints_final_filtered etc.
+                                # We need indices relative to img_points_final_filtered for point_colors
+                                # This requires finding where points_in_bbox_mask is true
+                                true_indices_in_final_filtered = np.where(points_in_bbox_mask)[0]
+                                if indices_to_color_for_this_object_mask.shape[0] == np.sum(points_in_bbox_mask): # Check if mask length matches
+                                    for i, original_idx_in_ff in enumerate(true_indices_in_final_filtered):
+                                        if indices_to_color_for_this_object_mask[i]: # if this point (from bbox) survived depth filter
+                                            if original_idx_in_ff < len(point_colors):
+                                                 point_colors[original_idx_in_ff] = color
+
+
                             if points_for_distance_calc.shape[0] > 0:
+                                all_object_scan_indices.append((label, current_object_scan_indices.tolist())) # Store for marked scan
+
                                 final_distances = np.linalg.norm(points_for_distance_calc, axis=1)
                                 avg_distance = np.mean(final_distances)
                                 
-                                distance_text = f"{avg_distance:.2f}m"
-                                
-                                text_center_x = (x_min_obj + x_max_obj) // 2
-                                text_center_y = (y_min_obj + y_max_obj) // 2
-                                
-                                (text_width, text_height), _ = cv2.getTextSize(distance_text, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
-                                text_origin_x = text_center_x - text_width // 2
-                                text_origin_y = text_center_y + text_height // 2
-                                
-                                cv2.putText(img, distance_text, (text_origin_x, text_origin_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                                # Draw rectangle around the group of points (img_points_in_bbox)
+                                if img_points_in_bbox.ndim == 2 and img_points_in_bbox.shape[0] > 0: # Check before using
+                                    img_points_in_bbox_int = np.round(img_points_in_bbox).astype(np.int32)
+                                    x_min_group = np.min(img_points_in_bbox_int[:, 0])
+                                    y_min_group = np.min(img_points_in_bbox_int[:, 1])
+                                    x_max_group = np.max(img_points_in_bbox_int[:, 0])
+                                    y_max_group = np.max(img_points_in_bbox_int[:, 1])
+                                    cv2.rectangle(img, (x_min_group, y_min_group), (x_max_group, y_max_group), color, 2)
+
+                                    # Annotate with label, distance, and confidence
+                                    annotation = f"{label}: {avg_distance:.2f}m ({confidence:.2f})"
+                                    (text_width, text_height), _ = cv2.getTextSize(annotation, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
+                                    text_origin_x = x_min_group + (x_max_group - x_min_group) // 2 - text_width // 2
+                                    text_origin_y = y_min_group - 5 if y_min_group - 5 > text_height else y_min_group + text_height + 5
+                                    cv2.putText(img, annotation, (text_origin_x, text_origin_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
             else:
                 self.get_logger().warn(f"Malformed detection object from API: {det}")
 
-        if img_points_filtered.ndim == 2 and img_points_filtered.shape[0] > 0 and point_colors is not None:
-            img_points_filtered_int = np.round(img_points_filtered).astype(np.int32)
-            for i, point_coord_int in enumerate(img_points_filtered_int): # Use enumerate to get index i
-                cv2.circle(img, tuple(point_coord_int), self.laser_point_radius, point_colors[i], 1) # Use point_colors[i]
+        # Draw circles for all (filtered) laser points on the image
+        if img_points_final_filtered.ndim == 2 and img_points_final_filtered.shape[0] > 0 and point_colors is not None:
+            img_points_filtered_int = np.round(img_points_final_filtered).astype(np.int32)
+            for i, point_coord_int in enumerate(img_points_filtered_int):
+                if i < len(point_colors): # Ensure index is within bounds
+                    cv2.circle(img, tuple(point_coord_int), self.laser_point_radius, point_colors[i], 1)
+        
         self.pub.publish(self.bridge.cv2_to_imgmsg(img))
-        img = None  # Explicitly release the image
+        img = None
+
+        # --- New: Create and publish marked LaserScan ---
+        marked_scan_msg = LaserScan()
+        marked_scan_msg.header = scan.header # Use original scan's header for timestamp and frame_id
+        marked_scan_msg.angle_min = scan.angle_min
+        marked_scan_msg.angle_max = scan.angle_max
+        marked_scan_msg.angle_increment = scan.angle_increment
+        marked_scan_msg.time_increment = scan.time_increment
+        marked_scan_msg.scan_time = scan.scan_time
+        marked_scan_msg.range_min = scan.range_min
+        marked_scan_msg.range_max = scan.range_max
+        marked_scan_msg.ranges = list(scan.ranges) # Copy of original ranges
+        marked_scan_msg.intensities = [0.0] * len(scan.ranges) # Default intensity
+
+        object_label_to_intensity_value = {}
+        next_intensity = 100.0 # Starting intensity for first object type
+        intensity_increment = 50.0
+
+        for obj_label, obj_indices in all_object_scan_indices:
+            if not obj_indices: continue # Skip if no indices for this object
+            
+            intensity_to_assign = 0.0
+            if obj_label not in object_label_to_intensity_value:
+                object_label_to_intensity_value[obj_label] = next_intensity
+                intensity_to_assign = next_intensity
+                next_intensity += intensity_increment
+            else:
+                intensity_to_assign = object_label_to_intensity_value[obj_label]
+            
+            for original_idx in obj_indices:
+                if 0 <= original_idx < len(marked_scan_msg.intensities):
+                     marked_scan_msg.intensities[original_idx] = intensity_to_assign
+        
+        self.marked_scan_pub.publish(marked_scan_msg)
+        # --- End New ---
 
     def destroy(self):
         self.bridge = None

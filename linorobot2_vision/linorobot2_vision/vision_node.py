@@ -27,6 +27,7 @@ class ReprojectionNode(Node):
         super().__init__('reprojection')
         self.bridge = CvBridge()
         self.lp = LaserProjection()
+        self.frame_counter = 0 # Add frame counter
 
         self.scan_topic = self.declare_parameter("scan_topic", "/scan").value
         self.image_topic = self.declare_parameter("image_topic", "/image_raw").value
@@ -192,97 +193,105 @@ class ReprojectionNode(Node):
         diff = abs(image_time - scan_time)
         self.get_logger().debug(f"time difference (image-scan): {diff:.6f} s")
 
+        self.frame_counter += 1 # Increment frame counter
+
         img = self.bridge.compressed_imgmsg_to_cv2(image)
         img_height, img_width = img.shape[:2]
 
-        # Object detection via ZeroMQ
-        _, img_encoded = cv2.imencode('.jpg', img)
-        
-        if img_encoded is None:
-            self.get_logger().error("Failed to encode image to JPEG for ZMQ. Skipping ZMQ communication for this frame.")
-            # Publish original image and default scan if encoding fails, then return
-            self.pub.publish(self.bridge.cv2_to_imgmsg(img))
-            # Consider publishing a default/empty marked_scan_msg as well
-            # For now, just returning to avoid further errors in this callback iteration
-            return
+        detections = [] # Initialize detections
 
-        img_bytes_to_send = img_encoded.tobytes()
-        if not img_bytes_to_send:
-            self.get_logger().error("Encoded image is empty. Skipping ZMQ communication for this frame.")
-            self.pub.publish(self.bridge.cv2_to_imgmsg(img))
-            return
-
-        detections = []
-        try:
-            self.get_logger().debug(f"Attempting to send {len(img_bytes_to_send)} image bytes via ZMQ PUSH.")
-            # Send image
-            self.image_push_socket.send(img_bytes_to_send)
-            self.get_logger().debug(f"Successfully sent {len(img_bytes_to_send)} image bytes via ZMQ PUSH.")
+        if self.frame_counter % 2 == 0: # Process every 2nd frame
+            self.get_logger().debug(f"Processing frame {self.frame_counter} for object detection.")
+            # Object detection via ZeroMQ
+            _, img_encoded = cv2.imencode('.jpg', img)
             
-            # Request and receive detections
-            self.get_logger().debug("Sending 'detect' signal via ZMQ REQ.")
-            self.results_req_socket.send_string("detect") # Send a simple request
-            self.get_logger().debug("'detect' signal sent. Polling for response...")
-            
-            # Wait for the response
-            poller = zmq.Poller()
-            poller.register(self.results_req_socket, zmq.POLLIN)
-            
-            # Wait for 1 second (1000ms)
-            if poller.poll(1000): 
-                detections_payload = self.results_req_socket.recv_json()
-
-                if isinstance(detections_payload, dict):
-                    if 'detections' in detections_payload:
-                        detections = detections_payload['detections']
-                    # Handle potential error message from server
-                    elif 'error' in detections_payload:
-                        self.get_logger().error(f"Detection service error: {detections_payload['error']}")
-                        detections = []
-                    else: # single-detection shorthand or other dict format
-                        detections = [detections_payload] if 'box' in detections_payload else []
-                elif isinstance(detections_payload, list):
-                    detections = detections_payload
-                else:
-                    self.get_logger().warn(f"Received unexpected detection format: {type(detections_payload)}")
-                    detections = []
+            if img_encoded is None:
+                self.get_logger().error("Failed to encode image to JPEG for ZMQ. Skipping ZMQ communication for this frame.")
+                # Publish original image and default scan if encoding fails, then return
+                # self.pub.publish(self.bridge.cv2_to_imgmsg(img)) # This will be handled later
+                # # Consider publishing a default/empty marked_scan_msg as well
+                # # For now, just returning to avoid further errors in this callback iteration
+                # return # Removed to allow processing of laser scan even if ZMQ fails for this frame
             else:
-                self.get_logger().warn("Timeout waiting for detection results from ZMQ REP socket.")
-                # Attempt to recover the REQ socket
-                self.get_logger().info("Attempting to recover ZMQ REQ socket...")
-                self.results_req_socket.close()
-                self.results_req_socket = self.zmq_context.socket(zmq.REQ)
-                self.results_req_socket.setsockopt(zmq.LINGER, 0) # Set LINGER to 0 to prevent hanging on close
-                self.results_req_socket.setsockopt(zmq.RCVTIMEO, 2000) # Set a timeout for receive operations
-                self.results_req_socket.connect(self.results_receiver_endpoint) # Corrected endpoint
-                self.get_logger().info(f"ZMQ REQ socket reconnected to {self.results_receiver_endpoint}")
+                img_bytes_to_send = img_encoded.tobytes()
+                if not img_bytes_to_send:
+                    self.get_logger().error("Encoded image is empty. Skipping ZMQ communication for this frame.")
+                    # self.pub.publish(self.bridge.cv2_to_imgmsg(img)) # Handled later
+                    # return # Removed
+                else:
+                    try:
+                        self.get_logger().debug(f"Attempting to send {len(img_bytes_to_send)} image bytes via ZMQ PUSH.")
+                        # Send image
+                        self.image_push_socket.send(img_bytes_to_send)
+                        self.get_logger().debug(f"Successfully sent {len(img_bytes_to_send)} image bytes via ZMQ PUSH.")
+                        
+                        # Request and receive detections
+                        self.get_logger().debug("Sending 'detect' signal via ZMQ REQ.")
+                        self.results_req_socket.send_string("detect") # Send a simple request
+                        self.get_logger().debug("'detect' signal sent. Polling for response...")
+                        
+                        # Wait for the response
+                        poller = zmq.Poller()
+                        poller.register(self.results_req_socket, zmq.POLLIN)
+                        
+                        # Wait for 1 second (1000ms)
+                        if poller.poll(1000): 
+                            detections_payload = self.results_req_socket.recv_json()
 
-        except zmq.error.Again as e: # Timeout
-            # This specifically catches timeout on results_req_socket.recv_json() due to RCVTIMEO
-            self.get_logger().warn(f"ZeroMQ REQ socket timeout waiting for detection results: {e}")
-            detections = [] # Proceed without detections
-        except zmq.error.ZMQError as e:
-            # This can catch other ZMQ errors, including potential send errors if not EAGAIN
-            self.get_logger().error(f"ZeroMQ communication error: {e} (errno: {e.errno if hasattr(e, 'errno') else 'N/A'})")
-            if hasattr(e, 'errno') and e.errno == zmq.EFSM:
-                 self.get_logger().error("ZMQ EFSM error: REQ socket might be in a bad state (e.g. send/recv out of sequence). Attempting recovery.")
-                 # Attempt recovery for REQ socket specifically if it's an FSM error
-                 try:
-                    self.results_req_socket.close()
-                    self.results_req_socket = self.zmq_context.socket(zmq.REQ)
-                    self.results_req_socket.setsockopt(zmq.LINGER, 0)
-                    self.results_req_socket.setsockopt(zmq.RCVTIMEO, 2000)
-                    self.results_req_socket.connect(self.results_receiver_endpoint)
-                    self.get_logger().info(f"ZMQ REQ socket reconnected after EFSM error to {self.results_receiver_endpoint}")
-                 except Exception as recovery_e:
-                    self.get_logger().error(f"Failed to recover REQ socket after EFSM error: {recovery_e}")
-            detections = [] # Proceed without detections
-        except json.JSONDecodeError as e:
-            self.get_logger().error(f"Failed to decode JSON response from ZeroMQ: {e}")
-            detections = []
-        except Exception as e:
-            self.get_logger().error(f"Error during ZeroMQ detection processing: {e}\\nTraceback: {traceback.format_exc()}")
-            detections = []
+                            if isinstance(detections_payload, dict):
+                                if 'detections' in detections_payload:
+                                    detections = detections_payload['detections']
+                                # Handle potential error message from server
+                                elif 'error' in detections_payload:
+                                    self.get_logger().error(f"Detection service error: {detections_payload['error']}")
+                                    detections = []
+                                else: # single-detection shorthand or other dict format
+                                    detections = [detections_payload] if 'box' in detections_payload else []
+                            elif isinstance(detections_payload, list):
+                                detections = detections_payload
+                            else:
+                                self.get_logger().warn(f"Received unexpected detection format: {type(detections_payload)}")
+                                detections = []
+                        else:
+                            self.get_logger().warn("Timeout waiting for detection results from ZMQ REP socket.")
+                            # Attempt to recover the REQ socket
+                            self.get_logger().info("Attempting to recover ZMQ REQ socket...")
+                            self.results_req_socket.close()
+                            self.results_req_socket = self.zmq_context.socket(zmq.REQ)
+                            self.results_req_socket.setsockopt(zmq.LINGER, 0) # Set LINGER to 0 to prevent hanging on close
+                            self.results_req_socket.setsockopt(zmq.RCVTIMEO, 2000) # Set a timeout for receive operations
+                            self.results_req_socket.connect(self.results_receiver_endpoint) # Corrected endpoint
+                            self.get_logger().info(f"ZMQ REQ socket reconnected to {self.results_receiver_endpoint}")
+
+                    except zmq.error.Again as e: # Timeout
+                        # This specifically catches timeout on results_req_socket.recv_json() due to RCVTIMEO
+                        self.get_logger().warn(f"ZeroMQ REQ socket timeout waiting for detection results: {e}")
+                        detections = [] # Proceed without detections
+                    except zmq.error.ZMQError as e:
+                        # This can catch other ZMQ errors, including potential send errors if not EAGAIN
+                        self.get_logger().error(f"ZeroMQ communication error: {e} (errno: {e.errno if hasattr(e, 'errno') else 'N/A'})")
+                        if hasattr(e, 'errno') and e.errno == zmq.EFSM:
+                             self.get_logger().error("ZMQ EFSM error: REQ socket might be in a bad state (e.g. send/recv out of sequence). Attempting recovery.")
+                             # Attempt recovery for REQ socket specifically if it's an FSM error
+                             try:
+                                self.results_req_socket.close()
+                                self.results_req_socket = self.zmq_context.socket(zmq.REQ)
+                                self.results_req_socket.setsockopt(zmq.LINGER, 0)
+                                self.results_req_socket.setsockopt(zmq.RCVTIMEO, 2000)
+                                self.results_req_socket.connect(self.results_receiver_endpoint)
+                                self.get_logger().info(f"ZMQ REQ socket reconnected after EFSM error to {self.results_receiver_endpoint}")
+                             except Exception as recovery_e:
+                                self.get_logger().error(f"Failed to recover REQ socket after EFSM error: {recovery_e}")
+                        detections = [] # Proceed without detections
+                    except json.JSONDecodeError as e:
+                        self.get_logger().error(f"Failed to decode JSON response from ZeroMQ: {e}")
+                        detections = []
+                    except Exception as e:
+                        self.get_logger().error(f"Error during ZeroMQ detection processing: {e}\\nTraceback: {traceback.format_exc()}")
+                        detections = []
+        else:
+            self.get_logger().debug(f"Skipping object detection for frame {self.frame_counter}.")
+            # Detections list will remain empty if not processed
         
         # --- Use laser_geometry to project laser scan to PointCloud2 ---
         try:

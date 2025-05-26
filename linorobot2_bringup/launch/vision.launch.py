@@ -7,7 +7,7 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='linorobot2_vision',
-            executable='linorobot2_vision',
+            executable='vision_node',
             name='linorobot2_vision',
             output='screen',
             parameters=[

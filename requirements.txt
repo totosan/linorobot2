@@ -1,0 +1,5 @@
+requests
+numpy-quaternion==2024.0.8
+numpy==1.26.4
+pyzmq
+transforms3d>=0.4.1

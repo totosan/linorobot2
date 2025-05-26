@@ -1,0 +1,12 @@
+[project]
+name = "linorobot2"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy==1.26.4",
+    "numpy-quaternion>=2024.0.8",
+    "pyzmq>=26.4.0",
+    "requests>=2.32.3",
+]

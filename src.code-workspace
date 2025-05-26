@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "../../../video_detection/video_detection"
+		}
+	],
+	"settings": {
+		"urdf-visualizer.packages": {
+			"fake_robot": "${workspaceFolder}/linorobot2/linorobot2_description/"
+		}
+	}
+}

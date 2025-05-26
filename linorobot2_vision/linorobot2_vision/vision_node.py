@@ -13,6 +13,7 @@ import tf2_ros
 from tf2_ros import TransformException
 from tf_transformations import euler_from_quaternion, quaternion_from_euler
 from geometry_msgs.msg import TransformStamped, Quaternion as GeoQuaternion # Added GeoQuaternion for clarity if needed elsewhere
+from geometry_msgs.msg import Point as GeoPointMsg # For DetectedObject
 from laser_geometry import LaserProjection
 import yaml
 import os
@@ -21,6 +22,7 @@ import json
 import traceback
 from quaternion import quaternion as Quaternion # Changed import for Quaternion
 from quaternion import as_rotation_matrix # Added import for as_rotation_matrix
+from linorobot2_vision.msg import DetectedObject, DetectedObjectArray # Added for custom messages
 
 class ReprojectionNode(Node):
     def __init__(self):
@@ -94,6 +96,7 @@ class ReprojectionNode(Node):
 
         self.pub = self.create_publisher(Image, "/reprojection", 10)
         self.marked_scan_pub = self.create_publisher(LaserScan, "/marked_scan", 10) # New publisher
+        self.detected_objects_pub = self.create_publisher(DetectedObjectArray, "vision/objects", 10) # New publisher for detected objects
         # Corrected message_filters imports and usage
         self.scan_sub = message_filters.Subscriber(self, LaserScan, self.scan_topic)
         self.image_sub = message_filters.Subscriber(self, CompressedImage, self.image_topic)
@@ -504,6 +507,8 @@ class ReprojectionNode(Node):
 
         # For publishing marked scan
         all_object_scan_indices = [] # List of (label, list_of_indices)
+        detected_objects_list = [] # List to store DetectedObject messages
+        next_tracking_id = 0 # Simple tracking ID counter
 
         # Now, process detections and draw rectangles around grouped points with annotations
         for det in detections:

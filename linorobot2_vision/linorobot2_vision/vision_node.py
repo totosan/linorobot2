@@ -4,6 +4,7 @@ import rclpy
 from rclpy.node import Node
 from rclpy.qos import QoSProfile, QoSReliabilityPolicy, QoSHistoryPolicy
 from sensor_msgs.msg import Image, CompressedImage, LaserScan, PointCloud2
+from std_msgs.msg import Header
 import sensor_msgs_py.point_cloud2 as pc2
 from cv_bridge import CvBridge
 import cv2
@@ -576,6 +577,24 @@ class ReprojectionNode(Node):
                                 final_distances = np.linalg.norm(points_for_distance_calc, axis=1)
                                 avg_distance = np.mean(final_distances)
                                 
+                                # Create DetectedObject message
+                                detected_obj = DetectedObject()
+                                detected_obj.name = label
+                                detected_obj.distance = float(avg_distance)
+                                detected_obj.tracking_id = next_tracking_id
+                                next_tracking_id += 1
+                                
+                                # Convert laser points to geometry_msgs/Point
+                                for laser_point in points_for_distance_calc:
+                                    geo_point = GeoPointMsg()
+                                    geo_point.x = float(laser_point[0])
+                                    geo_point.y = float(laser_point[1])
+                                    geo_point.z = float(laser_point[2])
+                                    detected_obj.points.append(geo_point)
+                                
+                                detected_objects_list.append(detected_obj)
+                                self.get_logger().debug(f"Created DetectedObject: {label}, distance: {avg_distance:.2f}m, points: {len(detected_obj.points)}")
+                                
                                 # Draw rectangle around the group of points (img_points_in_bbox)
                                 if img_points_in_bbox.ndim == 2 and img_points_in_bbox.shape[0] > 0: # Check before using
                                     img_points_in_bbox_int = np.round(img_points_in_bbox).astype(np.int32)
@@ -637,6 +656,15 @@ class ReprojectionNode(Node):
                      marked_scan_msg.intensities[original_idx] = intensity_to_assign
         
         self.marked_scan_pub.publish(marked_scan_msg)
+        # --- End New ---
+
+        # --- New: Create and publish DetectedObjectArray ---
+        detected_objects_msg = DetectedObjectArray()
+        detected_objects_msg.header = scan.header  # Use original scan's header for timestamp and frame_id
+        detected_objects_msg.objects = detected_objects_list
+        
+        self.detected_objects_pub.publish(detected_objects_msg)
+        self.get_logger().debug(f"Published DetectedObjectArray with {len(detected_objects_list)} objects")
         # --- End New ---
 
     def destroy_node(self):

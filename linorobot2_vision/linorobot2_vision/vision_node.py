@@ -595,21 +595,15 @@ class ReprojectionNode(Node):
                                 detected_objects_list.append(detected_obj)
                                 self.get_logger().debug(f"Created DetectedObject: {label}, distance: {avg_distance:.2f}m, points: {len(detected_obj.points)}")
                                 
-                                # Draw rectangle around the group of points (img_points_in_bbox)
-                                if img_points_in_bbox.ndim == 2 and img_points_in_bbox.shape[0] > 0: # Check before using
-                                    img_points_in_bbox_int = np.round(img_points_in_bbox).astype(np.int32)
-                                    x_min_group = np.min(img_points_in_bbox_int[:, 0])
-                                    y_min_group = np.min(img_points_in_bbox_int[:, 1])
-                                    x_max_group = np.max(img_points_in_bbox_int[:, 0])
-                                    y_max_group = np.max(img_points_in_bbox_int[:, 1])
-                                    cv2.rectangle(img, (x_min_group, y_min_group), (x_max_group, y_max_group), color, 2)
+                                # Draw rectangle around the detected object (using original box coordinates)
+                                cv2.rectangle(img, (box[0], box[1]), (box[2], box[3]), color, 2)
 
-                                    # Annotate with label, distance, and confidence
-                                    annotation = f"{label}: {avg_distance:.2f}m ({confidence:.2f})"
-                                    (text_width, text_height), _ = cv2.getTextSize(annotation, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
-                                    text_origin_x = x_min_group + (x_max_group - x_min_group) // 2 - text_width // 2
-                                    text_origin_y = y_min_group - 5 if y_min_group - 5 > text_height else y_min_group + text_height + 5
-                                    cv2.putText(img, annotation, (text_origin_x, text_origin_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
+                                # Annotate with label, distance, and confidence
+                                annotation = f"{label}: {avg_distance:.2f}m ({confidence:.2f})"
+                                (text_width, text_height), _ = cv2.getTextSize(annotation, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 2)
+                                text_origin_x = box[0] + (box[2] - box[0]) // 2 - text_width // 2
+                                text_origin_y = box[1] - 5 if box[1] - 5 > text_height else box[1] + text_height + 5
+                                cv2.putText(img, annotation, (text_origin_x, text_origin_y), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
             else:
                 self.get_logger().warn(f"Malformed detection object from API: {det}")
 

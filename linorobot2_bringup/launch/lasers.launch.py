@@ -40,7 +40,7 @@ def launch_rplidar(context, *args, **kwargs):
                 [FindPackageShare('sllidar_ros2'), 'launch', launch_file]
             )),
             launch_arguments={
-                'serial_port': '/dev/ttyUSB0', 
+                'serial_port': '/dev/ttyUSB1', 
                 'frame_id': LaunchConfiguration('frame_id'),
             }.items()   
         )]
@@ -93,7 +93,7 @@ def generate_launch_description():
 
         DeclareLaunchArgument(
             name='lidar_serial_port',
-            default_value='/dev/ttyUSB0',
+            default_value='/dev/ttyUSB1',
             description='Lidar serial port device name'
         ),
 
@@ -150,7 +150,7 @@ def generate_launch_description():
             output='screen',
             remappings=[('scan', LaunchConfiguration('topic_name'))],
             parameters=[{
-                'serial_port': '/dev/ttyUSB0',
+                'serial_port': '/dev/ttyUSB1',
                 'serial_baudrate': 115200,  # A1 / A2
                 'frame_id': LaunchConfiguration('frame_id'),
                 'inverted': False,
@@ -180,7 +180,7 @@ def generate_launch_description():
             name='ldlidar',
             output='screen',
             parameters=[
-                {'serial_port': '/dev/ttyUSB0'},
+                {'serial_port': '/dev/ttyUSB1'},
                 {'topic_name': LaunchConfiguration('topic_name')},
                 {'lidar_frame': LaunchConfiguration('frame_id')},
                 {'range_threshold': 0.005}

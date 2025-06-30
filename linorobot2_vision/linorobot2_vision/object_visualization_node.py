@@ -62,6 +62,8 @@ class ObjectVisualizationNode(Node):
         self.show_points = self.declare_parameter('show_points', True).value
         self.show_labels = self.declare_parameter('show_labels', True).value
         self.show_distance = self.declare_parameter('show_distance', True).value
+        # Verbosity parameter
+        self.verbose = self.declare_parameter('verbose', True).value
         
         # Color mapping for different object classes
         self.class_colors = {}
@@ -73,30 +75,31 @@ class ObjectVisualizationNode(Node):
         self.last_message_time = None
         
         self.get_logger().info('Object Visualization Node started')
-        self.get_logger().info(f'Subscribed to topic: vision/objects')
-        self.get_logger().info(f'Publishing markers to: vision/object_markers')
-        self.get_logger().info(f'Marker lifetime: {self.marker_lifetime}s')
-        self.get_logger().info(f'Show points: {self.show_points}')
-        self.get_logger().info(f'Show labels: {self.show_labels}')
-        self.get_logger().info(f'Show distance: {self.show_distance}')
-        
-        # Log QoS settings
-        self.get_logger().info('Objects QoS: RELIABLE, VOLATILE, KEEP_LAST(10)')
-        self.get_logger().info('Markers QoS: RELIABLE, TRANSIENT_LOCAL, KEEP_LAST(10)')
+        if self.verbose:
+            self.get_logger().info(f'Subscribed to topic: vision/objects')
+            self.get_logger().info(f'Publishing markers to: vision/object_markers')
+            self.get_logger().info(f'Marker lifetime: {self.marker_lifetime}s')
+            self.get_logger().info(f'Show points: {self.show_points}')
+            self.get_logger().info(f'Show labels: {self.show_labels}')
+            self.get_logger().info(f'Show distance: {self.show_distance}')
+            self.get_logger().info('Objects QoS: RELIABLE, VOLATILE, KEEP_LAST(10)')
+            self.get_logger().info('Markers QoS: RELIABLE, TRANSIENT_LOCAL, KEEP_LAST(10)')
 
     def debug_status(self):
         """Debug timer callback to check subscription status"""
         current_time = self.get_clock().now()
         
         # Log subscription status
-        self.get_logger().info(f'Subscription status - Messages received: {self.message_count}')
-        
+        if self.verbose:
+            self.get_logger().info(f'Subscription status - Messages received: {self.message_count}')
         if self.last_message_time:
             time_since_last = (current_time - self.last_message_time).nanoseconds / 1e9
-            self.get_logger().info(f'Time since last message: {time_since_last:.1f}s')
+            if self.verbose:
+                self.get_logger().info(f'Time since last message: {time_since_last:.1f}s')
         else:
-            self.get_logger().warn('No messages received yet on vision/objects topic')
-            self.get_logger().info('Check if the publisher node is running and publishing to /vision/objects')
+            if self.verbose:
+                self.get_logger().warn('No messages received yet on vision/objects topic')
+                self.get_logger().info('Check if the publisher node is running and publishing to /vision/objects')
 
     def get_color_for_class(self, class_name):
         """Get a consistent color for each object class"""
@@ -115,7 +118,8 @@ class ObjectVisualizationNode(Node):
             color.a = 0.8
             
             self.class_colors[class_name] = color
-            self.get_logger().info(f'Assigned color to class "{class_name}": RGB({r:.2f}, {g:.2f}, {b:.2f})')
+            if self.verbose:
+                self.get_logger().info(f'Assigned color to class "{class_name}": RGB({r:.2f}, {g:.2f}, {b:.2f})')
         
         return self.class_colors[class_name]
 
@@ -255,28 +259,29 @@ class ObjectVisualizationNode(Node):
         """Callback for detected objects"""
         self.message_count += 1
         self.last_message_time = self.get_clock().now()
-        
-        # Always log when we receive a message (use INFO level, not DEBUG)
-        self.get_logger().info(f'[CALLBACK] Received message #{self.message_count} with {len(msg.objects)} objects')
-        self.get_logger().info(f'[CALLBACK] Message frame_id: {msg.header.frame_id}')
-        self.get_logger().info(f'[CALLBACK] Message timestamp: {msg.header.stamp.sec}.{msg.header.stamp.nanosec}')
-        
+        if self.verbose:
+            self.get_logger().info(f'[CALLBACK] Received message #{self.message_count} with {len(msg.objects)} objects')
+            self.get_logger().info(f'[CALLBACK] Message frame_id: {msg.header.frame_id}')
+            self.get_logger().info(f'[CALLBACK] Message timestamp: {msg.header.stamp.sec}.{msg.header.stamp.nanosec}')
         if len(msg.objects) == 0:
-            self.get_logger().warn('[CALLBACK] Message contains no objects')
+            if self.verbose:
+                self.get_logger().warn('[CALLBACK] Message contains no objects')
             return
         
         marker_array = MarkerArray()
         marker_id = 0
         
         for i, obj in enumerate(msg.objects):
-            self.get_logger().info(f'[CALLBACK] Object {i}: name="{obj.name}", distance={obj.distance:.2f}m, points={len(obj.points)}')
+            if self.verbose:
+                self.get_logger().info(f'[CALLBACK] Object {i}: name="{obj.name}", distance={obj.distance:.2f}m, points={len(obj.points)}')
             
             # Create points marker if enabled and points exist
             if self.show_points and len(obj.points) > 0:
                 points_marker = self.create_points_marker(obj, marker_id, msg.header.frame_id)
                 marker_array.markers.append(points_marker)
                 marker_id += 1
-                self.get_logger().info(f'[CALLBACK] Created points marker for {obj.name}')
+                if self.verbose:
+                    self.get_logger().info(f'[CALLBACK] Created points marker for {obj.name}')
             
             # Create bounding box marker if points exist
             if len(obj.points) > 0:
@@ -284,21 +289,25 @@ class ObjectVisualizationNode(Node):
                 if bbox_marker:
                     marker_array.markers.append(bbox_marker)
                     marker_id += 1
-                    self.get_logger().info(f'[CALLBACK] Created bbox marker for {obj.name}')
+                    if self.verbose:
+                        self.get_logger().info(f'[CALLBACK] Created bbox marker for {obj.name}')
             
             # Create text marker if enabled
             if self.show_labels or self.show_distance:
                 text_marker = self.create_text_marker(obj, marker_id, msg.header.frame_id)
                 marker_array.markers.append(text_marker)
                 marker_id += 1
-                self.get_logger().info(f'[CALLBACK] Created text marker for {obj.name}')
+                if self.verbose:
+                    self.get_logger().info(f'[CALLBACK] Created text marker for {obj.name}')
         
         # Publish markers
         if marker_array.markers:
             self.marker_pub.publish(marker_array)
-            self.get_logger().info(f'[CALLBACK] Published {len(marker_array.markers)} markers to vision/object_markers')
+            if self.verbose:
+                self.get_logger().info(f'[CALLBACK] Published {len(marker_array.markers)} markers to vision/object_markers')
         else:
-            self.get_logger().warn('[CALLBACK] No markers to publish')
+            if self.verbose:
+                self.get_logger().warn('[CALLBACK] No markers to publish')
 
 def main(args=None):
     rclpy.init(args=args)

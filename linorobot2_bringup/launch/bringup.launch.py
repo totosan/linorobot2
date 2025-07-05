@@ -13,7 +13,9 @@
 # limitations under the License.
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, RegisterEventHandler, EmitEvent
+from launch.event_handlers import OnProcessExit
+from launch.events import Shutdown
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
@@ -117,6 +119,12 @@ def generate_launch_description():
             description='Enable micro-ROS'
         ),
 
+        DeclareLaunchArgument(
+            name='lidar_required', 
+            default_value='true',
+            description='Make lidar node required (stops launch if lidar fails)'
+        ),
+
         Node(
             condition=IfCondition(LaunchConfiguration("madgwick")),
             package='imu_filter_madgwick',
@@ -140,13 +148,22 @@ def generate_launch_description():
             remappings=[("odometry/filtered", LaunchConfiguration("odom_topic"))]
         ),
 
+        Node(
+            condition=IfCondition(LaunchConfiguration("lidar_required")),
+            package='linorobot2_bringup',
+            executable='lidar_monitor.py',
+            name='lidar_monitor',
+            output='screen'
+        ),
+
         IncludeLaunchDescription(
                     PythonLaunchDescriptionSource(default_robot_launch_path),
                     condition=UnlessCondition(LaunchConfiguration("custom_robot")),
                     launch_arguments={
                         'base_serial_port': LaunchConfiguration("base_serial_port"),
                         'webcam_enabled': LaunchConfiguration("webcam_enabled"),
-                        'micro_ros_enabled': LaunchConfiguration("micro_ros_enabled")
+                        'micro_ros_enabled': LaunchConfiguration("micro_ros_enabled"),
+                        'lidar_required': LaunchConfiguration("lidar_required")
                     }.items()
                 ),
 

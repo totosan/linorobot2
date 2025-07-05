@@ -204,7 +204,7 @@ class ReprojectionNode(Node):
 
         detections = [] # Initialize detections
 
-        if self.frame_counter % 1 == 0: # Process every 2nd frame
+        if self.frame_counter % 2 == 0: # Process every 2nd frame
             self.get_logger().debug(f"Processing frame {self.frame_counter} for object detection.")
             # Object detection via ZeroMQ
             _, img_encoded = cv2.imencode('.jpg', img)
@@ -515,7 +515,7 @@ class ReprojectionNode(Node):
         for det in detections:
             if 'box' in det and 'label' in det and 'confidence' in det:
                 confidence = float(det['confidence'])
-                if confidence < 0.5:
+                if confidence < 0.2:
                     continue  # Skip detections with confidence under 50%
                 if confidence >= self.api_confidence_threshold:
                     box = [int(coord) for coord in det['box']] 

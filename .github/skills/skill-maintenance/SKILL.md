@@ -11,6 +11,16 @@ verified evidence. This is an on-demand workflow, not a background scheduler.
 Invoke it after a meaningful workflow change, when a chat reveals a recurring
 failure or reusable procedure, or during a periodic project-maintenance review.
 
+## Project customization ownership
+
+The tracked canonical customizations live under
+`src/linorobot2/.github/`, while VS Code opened at the workspace root discovers
+the active copies under `.github/`. Edit and review the canonical Git copy
+first. Then synchronize only the customization files intentionally changed to
+the active workspace copy and verify byte-for-byte equality. Do not overwrite
+unrelated active customizations or treat an untracked outer edit as durable
+until its canonical counterpart is versioned.
+
 ## Procedure
 
 1. **Establish scope and current state.** Confirm whether the work is workspace-

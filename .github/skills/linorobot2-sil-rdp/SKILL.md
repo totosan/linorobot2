@@ -1,6 +1,6 @@
 ---
 name: linorobot2-sil-rdp
-description: "Use when working in the Linorobot2 ROS 2 Humble/Gazebo Fortress workspace: start, stop, or troubleshoot RDP Gazebo/RViz; add a simulated human/person or future sensor-fusion test objects; validate SDF/DAE assets, camera and LiDAR visibility; open the Vision live camera view with vision_view; run the local .71-protocol ZeroMQ detector or diagnose camera/LiDAR fusion; diagnose launch/build/parser errors; run vision replay; optionally perform a separately authorized, bounded single-frame inference check against the user-started Jetson .71; source the VM environment; control simulated teleop; or investigate CPU/TF/clock issues. The .150 HTTP service is not the current inference target. Never access hardware without separate authorization."
+description: "Use when working in the Linorobot2 ROS 2 Humble/Gazebo Fortress workspace: prepare, activate, or roll back reproducible simulation releases; start, stop, or troubleshoot RDP Gazebo/RViz; add simulated targets; validate SDF/DAE assets, camera and LiDAR visibility; open the Vision live camera view; run the local .71-protocol detector or diagnose camera/LiDAR fusion; diagnose launch/build/parser errors; run replay; source the VM environment; control simulated teleop; investigate CPU/TF/clock issues; or perform a separately authorized bounded Jetson .71 check. The .150 HTTP service is not the current inference target. Never access hardware without separate authorization."
 user-invocable: true
 ---
 
@@ -31,6 +31,22 @@ cleanup.
   `/home/toto/linobot2_sim/install` only while no active release exists.
 - Simulation time is node-specific (`use_sim_time=true` for simulated consumers); do not globally substitute wall time for `/clock`.
 - The top-level Fortress launch enforces `ros_profile:=sim`, `ros_domain_id:=42`; the bringup launch is hardware-only `hardware/44`. Domain 43 has separate vision-transport and input-only Nav2 replay harnesses; use `docs/REPLAY_ROS_CONTRACT.md`, `scripts/test_replay_gate.sh`, and `scripts/test_nav2_replay_gate.sh`. Do not imply that a costmap-input replay is navigation-goal replay or a new G4/G5 acceptance. ROS domains are not security boundaries.
+
+## Reproducible simulation releases
+
+Use `docs/G9_LIFECYCLE.md` as the authoritative fresh-build, activation,
+recovery, and rollback procedure. Releases under
+`/home/toto/linobot2_sim/releases/<id>` are immutable evidence-bearing
+checkouts with separate build/install/log paths. Build only a pushed commit
+from its configured remote; do not treat the dirty development checkout as a
+release.
+
+Activation and rollback use the guarded `scripts/activate_sim_release.sh` and
+`scripts/rollback_sim_release.sh` entry points. Do not rewrite `active` or
+`previous` manually, activate an unvalidated manifest, or switch releases
+while owned simulator processes are running. After a switch, source
+`scripts/enter_sim_env.sh`, verify the resolved package prefix, and use the
+bounded G9 smoke/cleanup contract rather than inferring success from a build.
 
 ## Nav2 input-only bag replay
 
@@ -161,7 +177,7 @@ PyTorch CPU weights; inference accuracy and latency are not hardware-equivalent.
 The adapter's `sim_local` profile is for Domain 42 and the container reachable
 from the VM at `host.docker.internal:5555/5556`. Install `pyzmq` in the ROS
 environment, start the container as described in
-[`sim_detector/README.md`](../../../src/linorobot2/linorobot2_vision/sim_detector/README.md),
+`linorobot2_vision/sim_detector/README.md` from the canonical checkout,
 and use the weights SHA-256 printed by its startup log as the version. Do not
 reuse a stale hash after changing weights.
 
@@ -219,9 +235,25 @@ claim `.71`, TensorRT, G5, or hardware performance from the local detector.
 
 ## RDP and visualization
 
-1. On the Mac, keep `bash scripts/connect_rdp_mac.sh` running; connect Windows App to `127.0.0.1:13389`.
-2. The guest desktop uses local X11 `DISPLAY=:10.0`, XFCE and Mesa/llvmpipe. Keep xrdp listeners loopback-only. Never use `xhost +`, public listeners, or firewall changes as workarounds.
-3. In an XFCE terminal inside the RDP desktop, start the stationary Gazebo+RViz view:
+1. On the Mac, start exactly one canonical tunnel and keep its terminal open:
+   `bash /Users/toto/Projects/linobot2_ws/src/linorobot2/scripts/connect_rdp_mac.sh`.
+   Connect the versioned `ros-humble-rdp.rdp` profile in Windows App to
+   `127.0.0.1:13389`, without a gateway. If that port is already occupied,
+   inspect its exact listener instead of starting a second tunnel.
+2. Diagnose availability in layers before changing configuration:
+   - Mac listener: `lsof -nP -iTCP:13389 -sTCP:LISTEN`
+   - Guest services/listeners:
+     `orb -m ros-humble python3 /Users/toto/Projects/linobot2_ws/src/linorobot2/scripts/check_rdp_ready.py`
+   - Existing Xorg session/display: inspect `loginctl`, xrdp/Xorg processes,
+     `/tmp/.X11-unix/X*`, then `DISPLAY=:10.0 xrandr --current`.
+
+   The readiness script deliberately checks listener state without opening a
+   raw TCP connection. `nc`, a bare socket connect, or similar non-RDP probes
+   can create alarming xrdp protocol errors even when the service is healthy.
+3. The guest desktop uses local X11 `DISPLAY=:10.0`, XFCE and Mesa/llvmpipe.
+   Keep xrdp and sesman loopback-only. Never use `xhost +`, public listeners,
+   or firewall changes as workarounds.
+4. In an XFCE terminal inside the RDP desktop, start the stationary Gazebo+RViz view:
 
    ```bash
    bash scripts/start_gazebo_rdp.sh
@@ -234,9 +266,14 @@ claim `.71`, TensorRT, G5, or hardware performance from the local detector.
    ```
 
    The launcher validates local display/domain, selects a unique `IGN_PARTITION`, uses `LP_NUM_THREADS=2` by default, enables Gazebo GUI and `fortress.rviz`, starts no Nav2, and sends no navigation goal. It records logs under `/home/toto/linobot2_sim/log/rdp-gazebo-*`; latest path is in `rdp-gazebo-current.txt`.
-4. Prefer stopping from the launch terminal with `Ctrl+C`; the supervisor cleans up its process tree. For stopping multiple or detached VM simulation sessions, use the shutdown procedure below. Before starting again, verify no older Fortress launch is active. Never start a second world in Domain 42.
-5. XDG Gazebo autostart is optional and is not assumed enabled. Configure only with `scripts/configure_rdp_gazebo_autostart.sh --enable`; undo with `--disable`. This applies on the next XFCE login, not to the current desktop.
-6. The `.rdp` profile requests a fixed 1280×800 with dynamic resize disabled; the active session changes only after reconnect. xorgxrdp may reject forced `xrandr` framebuffer resizing—do not force it.
+5. Prefer stopping from the launch terminal with `Ctrl+C`; the supervisor cleans up its process tree. For stopping multiple or detached VM simulation sessions, use the shutdown procedure below. Before starting again, verify no older Fortress launch is active. Never start a second world in Domain 42.
+6. XDG Gazebo autostart is optional and is not assumed enabled. Configure only with `scripts/configure_rdp_gazebo_autostart.sh --enable`; undo with `--disable`. This applies on the next XFCE login, not to the current desktop.
+7. The `.rdp` profile requests a fixed 1280×800 with dynamic resize disabled.
+   A disconnected Xorg session may persist at its old size; fully disconnect
+   the client and reopen the profile, then verify the negotiated mode with
+   `xrandr --current`. Reuse of the existing session is normal. xorgxrdp may
+   reject forced framebuffer resizing—do not force `xrandr` and do not
+   terminate the desktop merely to change its resolution.
 
 ## Stop simulation sessions in the VM
 

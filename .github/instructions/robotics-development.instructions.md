@@ -4,14 +4,14 @@ description: "Use when planning, coding, testing, debugging, reviewing, or docum
 
 # Robotikentwicklung: Projektwissen und Arbeitsregeln
 
-Stand: 14.10.2026. Diese projektbezogene Instruction unterstützt unterschiedliche Entwicklungsaufgaben; sie ersetzt weder Nutzerfreigaben noch die maßgebliche Projektdokumentation.
+Diese projektbezogene Instruction unterstützt unterschiedliche Entwicklungsaufgaben; sie ersetzt weder Nutzerfreigaben noch die maßgebliche Projektdokumentation.
 
 ## 1. Projektkontext und maßgebliche Quellen
 
 - Der autoritative Fahrplan steht im [Development Plan](../../docs/DEVELOPMENT_PLAN.md), belegte Ergebnisse und Grenzen im [Implementation Status](../../docs/IMPLEMENTATION_STATUS.md), offene Arbeit in [OPEN_TASKS](../../docs/OPEN_TASKS.md). Die [aktuelle Übergabe](../../docs/HANDOFF.md) ist nur ein Kurzüberblick.
 - Git-Root ist `src/linorobot2`, nicht die Workspace-Wurzel. Der Checkout enthält lokale Änderungen: kein `git clean`, Reset, pauschales Überschreiben oder Entfernen von Dateien ohne ausdrücklichen Auftrag.
 - Zielarchitektur: Motor/Basis (Regelung und lokaler Stopp), Roboterkern (ROS, TF, EKF, SLAM/Nav2) und optionale Vision-/AI-Dienste mit klaren Verträgen. Austauschbarkeit an Paket-/Prozessgrenzen erreichen; keine unnötigen Netzwerkdienste oder Frameworks einführen.
-- Simulation-first bleibt die verbindliche Reihenfolge. OrbStack Linux ARM64 mit Ubuntu 22.04, ROS 2 Humble und Gazebo Fortress ist der geprüfte SIL-Pfad. G1–G5 sind im SIL bestanden; G6 lokal ist am 13.10.2026 bestanden. G4/G5-PASS und ihr Abnahmeumfang nicht durch spätere Replay-Arbeit umdeuten oder ändern. Der Nav2-Eingabe-Replay in Domain 43 hat am 14.10.2026 für genau ein G5-Off-Bag-Segment bestanden; Mehrsegment-/Clock-Rewind, G4- und G5-Mock-Segmentierung bleiben offen. G7/G8 bleiben durch fehlende Hardware-Vorbedingungen und separate Freigaben blockiert.
+- Simulation-first bleibt die verbindliche Reihenfolge. OrbStack Linux ARM64 mit Ubuntu 22.04, ROS 2 Humble und Gazebo Fortress ist der geprüfte SIL-Pfad. Gate-, Replay- und Transferstatus ausschließlich aus den oben genannten Projektdokumenten übernehmen; keine datierten Zwischenstände aus Instructions als aktuelle Evidenz behandeln und den Abnahmeumfang späterer Replays nicht umdeuten.
 - Projektprofile: Simulation 42, Replay 43, Hardware 44. Diese Profile und Harnesses sind implementiert, aber ROS-Domains sind keine Sicherheitsgrenze und belegen keine sichere Domainisolation gegen fremde Prozesse.
 - Kein Pi-/Jetson-/ESP32-/Motor-/Firmware-/Inferenzbetrieb ohne separate Freigabe. Hardware-Geometrie und reale Stopps sind unvermessen, sofern im aktuellen Nachweis nicht anders belegt.
 
@@ -43,7 +43,7 @@ Stand: 14.10.2026. Diese projektbezogene Instruction unterstützt unterschiedlic
 - Unit-/ROS-freie Tests decken Geometrie, Verträge, Fehler-/Zeitfälle und Parser ab. SIL Integration prüft echte ROS-/Simulatorpfade und protokolliert Laufzeitdaten. HIL/Hardware erfordert eigene Freigabe, sichere Motorzustände, Rückfallweg und unabhängige Stoppprüfung.
 - Simulationserfolg nicht mit Hardwaretauglichkeit gleichsetzen. Test-fixture, aufgezeichnete Daten, Sensor-SIL, HIL und physischer Test deutlich unterscheiden.
 - Bei Robotik-Runtime die relevanten Observables sichern: Clock/TF/Frames, Sensorfrische, tatsächliche Odom-/Ground-Truth-Bewegung, ausgegebene Befehle, Action-Endstatus, Kostenkarte/Plan, Clearance, Ressourcen und Prozess-Cleanup.
-- Sensorrauschen, Schlupf, Verzögerungen, Ausfälle und Replay nur kontrolliert, reproduzierbar und passend zur Abnahmematrix hinzufügen. Die geprüften aktuellen G3/G4-Harnesses belegen kein explizites generisches Rauschmodell oder rosbag-Aufzeichnung.
+- Sensorrauschen, Schlupf, Verzögerungen, Ausfälle und Replay nur kontrolliert, reproduzierbar und passend zur Abnahmematrix hinzufügen. Vor Aussagen zu vorhandenen Profilen, Seeds, Aufzeichnungen oder Abdeckung die aktuelle Testkonfiguration und den Laufnachweis prüfen.
 - Bei Fehlern keine Gate-Umetikettierung, nachträgliche Lockerung oder automatische Wiederholung. Sicher abbrechen, Bericht erhalten, Root Cause prüfen, Tests aktualisieren und erneute Runtime-Freigabe einholen.
 
 ## 5. Aktuelle Technologie recherchieren
@@ -71,10 +71,10 @@ Bei Fragen nach „neuesten“ Technologien, Paketen, Modellen, Runtimes, APIs o
 
 Diese Regeln sind zusätzlich anzuwenden, wenn eine Aufgabe Bildverarbeitung, AI-Inferenz, Detection/Segmentation, Tracking, Sensorfusion oder AI-ROS-Integration betrifft.
 
-- `linorobot2_vision` bietet Contract v1, Fixture-/Off-Backends, einen ROS-freien Consumer und einen Offline-Adapter für die im gesicherten Jetson-Laufzeitquellstand gefundene `/v1/vision/detection`-Antwort. Es gibt keinen bestätigten Live-API-Aufruf und keine produktive ROS-/HTTP-Integration.
+- `linorobot2_vision` bietet Contract v1, Fixture-/Off-Backends, ROS-freie Consumer sowie lokale und externe Adapterpfade. Welche Pfade gebaut, installiert, simuliert oder gegen einen echten Dienst geprüft sind, steht im aktuellen Implementierungsstatus; ein lokaler Protokollzwilling belegt keine Jetson-/TensorRT-Ausführung.
 - Die Legacy-Antwort `success`/`predictions` enthält `timestampUTC`, das zur Antwortzeit erzeugt wird und **keine** Capture-Zeit ist. Modellversion und stabile Label-IDs fehlen. Capture-Metadaten, Modellversion und explizites Label-Mapping zuführen; keine Werte aus `moduleId`, Empfangszeit oder Namen erraten.
 - Contract v1 markiert Capture-Zeit mit `ros_sim` oder `unix_utc`; diese Zeitdomänen nicht vergleichen. `frame_id`, Bildgröße, Modell-/Label-Schema und Pixelboxen `[x_min, y_min, x_max, y_max]` (exklusive rechte/untere Grenze) erhalten. Fehler, `empty`, fehlend, `stale`, future und unavailable getrennt behandeln.
-- Die vorhandenen Fixtures sind synthetisch. Fünf Fortress-Image-/CameraInfo-Paare wurden mit einem absichtlichen Empty-Mock konsumiert. Das belegt den Consumer-Pfad, keine Detektionsqualität, echte Inferenz, Live-Transport oder G5.
+- Synthetische Fixtures und historische Empty-Mock-Läufe belegen nur ihre jeweiligen Consumer-/Transportverträge, keine Detektionsqualität oder echte Inferenz. Positive lokale Inferenz, externer Dienst, Jetson/TensorRT und Hardwaretransfer sind getrennte Nachweise.
 - Eine 2D-Box ist keine metrische Hindernisposition. Projektion benötigt passende Intrinsics/Extrinsics und Depth/PointCloud oder eine begründete Geometrieannahme samt Unsicherheit. Keine AI-Box direkt als Costmap-Hindernis oder Motorbefehl verwenden.
 - Auflösung, Encoding, Crop/Resize/Letterbox, optischer Frame und CameraInfo/Kalibrierungs-ID gemeinsam versionieren. Bekannte Projektstände umfassen 640×480 und 1920×1080; Intrinsics nicht ungeprüft übertragen.
 - Modellqualität nicht nur mit mAP oder Demo-Frames beschreiben. Je nach Aufgabe Precision/Recall, klassenspezifische Fehler, False-Negative-Risiko, Robustheit und p50/p95-Latenz sowie Rechen-/Energie-/Thermikbudget messen. Konfidenz ist nicht automatisch eine kalibrierte Wahrscheinlichkeit.

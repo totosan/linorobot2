@@ -74,6 +74,15 @@ if [[ -n "${G2_INCLUDE_CASTER:-}" ]]; then
     printf '%s\n' "$G2_INCLUDE_CASTER" >"${LOG_DIR}/include-caster.txt"
     echo "[G2] Discrimination probe: include_caster=$G2_INCLUDE_CASTER (test only)"
 fi
+if [[ -n "${G2_CASTER_MU:-}" ]]; then
+    if [[ "$G2_CASTER_MU" != "0.01" && "$G2_CASTER_MU" != "0.0" ]]; then
+        echo "FAIL: G2_CASTER_MU must be exactly 0.01 or 0.0."
+        exit 1
+    fi
+    G2_LAUNCH_ARGS+=("caster_mu:=${G2_CASTER_MU}")
+    printf '%s\n' "$G2_CASTER_MU" >"${LOG_DIR}/caster-mu.txt"
+    echo "[G2] Discrimination probe: caster_mu=$G2_CASTER_MU (test only)"
+fi
 
 printf '%s\n' "[G2] Isolated headless Fortress launch (Domain ${ROS_DOMAIN_ID}, ${IGN_PARTITION})"
 python3 "$WORKSPACE_DIR/scripts/supervised_process.py" -- \

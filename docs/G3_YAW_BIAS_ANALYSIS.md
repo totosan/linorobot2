@@ -57,11 +57,16 @@ The factor is a **simulator artifact candidate**, not a hardware calibration
 value. It must not be exported to firmware or used as a physical expectation.
 Hardware wheel-odometry yaw requires its own measured calibration in G8.
 
-## Discriminating follow-up experiments (proposed, not run)
+## Discriminating follow-up experiments
 
-1. Physics-step probe: repeat the G2 turn with a halved `max_step_size`; a
-   soft-constraint cause would shift the ratio measurably.
-2. Contact-variant probe: turn with the caster link removed (test-only model
-   variant); if the ratio persists, the wheel contact constraints alone carry
-   the deficit.
-3. If needed, instrument contact slip velocities in a DART-level debug build.
+1. **Physics-step probe run 15.10.2026:** Baseline `0.001 s` produced raw/GT
+   `1.213581…1.215269`; `0.0005 s` produced `1.213636…1.215400`. No measurable
+   shift occurred in this bounded run.
+2. **Caster-removed probe run 15.10.2026 — inconclusive:** The base dropped to
+   `z≈−0.0125 m`, pitched `0.176…0.189 rad`, and achieved zero Ground-Truth yaw
+   in the first turn. Removing the support introduced chassis/ground contact,
+   so the result does not isolate wheel constraints.
+3. **Revised contact probe:** retain the caster geometry but set its already
+   low friction from `0.01` to `0.0`. This preserves support while removing
+   tangential caster friction.
+4. If needed, instrument contact slip velocities in a DART-level debug build.

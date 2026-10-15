@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://ros.org/wiki/xacro">
-  <xacro:macro name="caster_wheel" params="side mass base_length wheel_radius wheel_pos_z">
+  <xacro:macro name="caster_wheel" params="side mass base_length wheel_radius wheel_pos_z caster_mu:=0.01">
     <xacro:property name="caster_wheel_radius" value="${(wheel_radius - wheel_pos_z) / 2}" />
     <xacro:if value="${side == 'front'}">
         <!--<xacro:property name="caster_wheel_x" value="${(base_length / 2) - (caster_wheel_radius / 4)}" /> -->
@@ -39,8 +39,8 @@
     </link>
 
     <gazebo reference="${side}_caster_wheel_link">
-        <mu1>0.01</mu1>
-        <mu2>0.01</mu2>
+        <mu1>${caster_mu}</mu1>
+        <mu2>${caster_mu}</mu2>
     </gazebo>
 
     <joint name="${side}_caster_wheel_joint" type="fixed">

@@ -172,6 +172,10 @@ def generate_launch_description():
             name='include_caster', default_value='true',
             description='G3 test only: include the front caster contact'
         ),
+        DeclareLaunchArgument(
+            name='caster_mu', default_value='0.01',
+            description='G3 test only: caster friction coefficient'
+        ),
 
         # 1. Server und GUI unabhängig starten; kein gemeinsamer Fork-Wrapper.
         RegisterEventHandler(OnProcessExit(
@@ -199,7 +203,8 @@ def generate_launch_description():
                     ' imu_gyro_noise_stddev:=', LaunchConfiguration('imu_gyro_noise_stddev'),
                     ' imu_accel_noise_stddev:=', LaunchConfiguration('imu_accel_noise_stddev'),
                     ' wheel_mu:=', LaunchConfiguration('wheel_mu'),
-                    ' include_caster:=', LaunchConfiguration('include_caster')
+                    ' include_caster:=', LaunchConfiguration('include_caster'),
+                    ' caster_mu:=', LaunchConfiguration('caster_mu')
                 ])
             }]
         ),

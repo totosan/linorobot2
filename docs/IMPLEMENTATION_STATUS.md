@@ -4,7 +4,7 @@ Stand: 15.10.2026. Dieses Dokument hält Nachweise, tatsächliche Laufzeit und b
 
 ## Aktueller Gate- und Phasenstatus
 
-- **G9 in Implementierung, Rollback-Drill noch offen:** Aktive Projektdokumente,
+- **G9 am 15.10.2026 bestanden:** Aktive Projektdokumente,
     Betriebs-/Testskripte, projektbezogene Copilot-Anweisungen und das
     RDP-Profil wurden in den Fork integriert. Releasewerkzeuge erzeugen
     getrennte Build-/Install-/Logpfade, schreiben Commit-/Versionsmanifeste und
@@ -22,16 +22,34 @@ Stand: 15.10.2026. Dieses Dokument hält Nachweise, tatsächliche Laufzeit und b
     Stop des CLI-Daemons bei daemonloser Prüfung verschwunden. Manifeststatus
     ist `passed`; Evidenz:
     `/home/toto/linobot2_sim/releases/g9-ref-b510358/evidence/release-manifest.json`
-    und `log/g9-smoke-20261015-080529/`. G9 bleibt offen, bis ein zweiter
-    validierter Release aktiviert und der atomare Rollback praktisch
-    bestanden ist.
+    und `log/g9-smoke-20261015-080529/`. Ein zweiter Remote-Checkout
+    `g9-candidate-c7871e2` bestand denselben Build, 463 Tests und den
+    verschärften Headless-Smoke unter
+    `log/g9-smoke-20261015-080705/`, einschließlich daemonloser
+    Graph-Cleanup-Prüfung. Der Drill aktivierte zuerst die Referenz, dann den
+    Kandidaten und rollte atomar auf die Referenz zurück; `active`, `previous`
+    und `ros2 pkg prefix linorobot2_gazebo` zeigten nach jedem Schritt auf den
+    erwarteten Release. Da vor dem Drill kein `active`-Symlink existierte,
+    wurden nur die beiden Drill-Symlinks anschließend entfernt; beide
+    validierten Releases und Manifeste bleiben erhalten. Der EOL-Review bleibt
+    separat offen.
     Verbindlicher Ablauf: [`G9_LIFECYCLE.md`](G9_LIFECYCLE.md).
-- **G3-Diskriminatoren implementiert, Runtimeproben offen:** Der G2-Harness
+- **G3-Diskriminatoren teilweise ausgeführt:** Der G2-Harness
     akzeptiert test-only ausschließlich `0,001` oder `0,0005 s`
     Physikschritt und einen expliziten Caster-Schalter mit Default `true`.
     Laufwelt, Quell-/Ausgabehash und Casterwahl werden getrennt protokolliert.
-    Die Produktbaseline bleibt unverändert; Baseline-, Halbstep- und
-    Caster-entfernt-Läufe wurden noch nicht ausgeführt.
+    Die Produktbaseline bleibt unverändert. Baseline
+    `g2-motion-20261015-080755` reproduzierte raw/GT
+    `1,213581…1,215269`. Mit halbiertem Schritt in
+    `g2-motion-20261015-080829` blieb der Bereich
+    `1,213636…1,215400`; der Physikschritt verschiebt den Faktor damit in
+    dieser Probe nicht messbar. Die Caster-entfernt-Probe
+    `g2-motion-20261015-080932` brach beim ersten Drehsegment mit
+    Ground-Truth-Yaw `0` ab. Bereits in den bestandenen Geradeaussegmenten lag
+    die Basis bei `z≈−0,0125 m` und Pitch `0,176…0,189 rad`; Chassis-/Bodenkontakt
+    ersetzt die entfernte Stütze. Das Ergebnis ist `inconclusive`, kein Beleg
+    gegen den Caster. Eine geometrisch gültige Folgeprobe behält den Caster
+    bei und setzt nur dessen Kontaktreibung testweise von `0,01` auf `0`.
 - **G4 am 08.10.2026 vollständig im SIL bestanden.** Runs 42/43 decken alle vier
     sensor-derived Basisszenarien ab; Runs 44/45 bestehen dieselbe Matrix unter
     dem eingefrorenen `g4-noise-slip-v1`-Profil. Run 25 bleibt separat als

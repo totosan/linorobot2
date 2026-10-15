@@ -79,6 +79,9 @@ class YawBiasAnalysisTests(unittest.TestCase):
         self.assertIn('G2_LAUNCH_ARGS+=("wheel_mu:=${G2_WHEEL_MU}")', text)
         self.assertIn(
             'fi\nif [[ -n "${G2_PHYSICS_STEP:-}" ]]', text)
+        self.assertIn('G2_CASTER_MU" != "0.01"', text)
+        self.assertIn('G2_CASTER_MU" != "0.0"', text)
+        self.assertIn('caster_mu:=${G2_CASTER_MU}', text)
 
     def test_world_variant_is_bounded_hashed_and_non_overwriting(self):
         spec = importlib.util.spec_from_file_location(
@@ -108,8 +111,10 @@ class YawBiasAnalysisTests(unittest.TestCase):
                  "2wd_fortress.urdf.xacro").read_text()
         launch = (ROOT/"linorobot2_gazebo/launch/fortress.launch.py").read_text()
         self.assertIn('<xacro:arg name="include_caster" default="true"/>', xacro)
+        self.assertIn('<xacro:arg name="caster_mu" default="0.01"/>', xacro)
         self.assertIn('<xacro:if value="$(arg include_caster)">', xacro)
         self.assertIn("name='include_caster', default_value='true'", launch)
+        self.assertIn("name='caster_mu', default_value='0.01'", launch)
 
 
 if __name__ == "__main__":

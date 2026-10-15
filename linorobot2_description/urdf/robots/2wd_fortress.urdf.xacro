@@ -6,6 +6,7 @@
   <xacro:arg name="imu_accel_noise_stddev" default="0.0"/>
   <xacro:arg name="wheel_mu" default="1.0"/>
   <xacro:arg name="include_caster" default="true"/>
+  <xacro:arg name="caster_mu" default="0.01"/>
 
   <!-- Geometrieparameter (Pi-Stand / Phase 0 Manifest) -->
   <xacro:property name="base_length" value="0.22" />
@@ -88,6 +89,7 @@
       base_length="${base_length}"
       wheel_radius="${wheel_radius}"
       wheel_pos_z="${wheel_pos_z}"
+      caster_mu="$(arg caster_mu)"
     />
   </xacro:if>
 

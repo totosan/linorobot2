@@ -241,14 +241,19 @@ claim `.71`, TensorRT, G5, or hardware performance from the local detector.
    mirrors that port to the Mac. Connect the versioned `ros-humble-rdp.rdp`
    profile in Windows App to `127.0.0.1:13389`, without a gateway. Manage the
    bridge inside the VM with
-   `bash scripts/configure_rdp_bridge.sh --status | --enable | --disable`.
+   `bash scripts/configure_rdp_bridge.sh --status | --enable | --disable | --check-exposure`.
    Never add `BindToDevice=` to the socket: OrbStack does not activate network
    device units, so the dependency makes the socket fail at boot.
    The access boundary depends on the OrbStack setting
    `machines.expose_ports_to_lan`. It must stay `false`, otherwise the Mac
    binds the forward on all interfaces and exposes the RDP login to the local
-   network. Verify with `orb config show | grep expose_ports_to_lan` before
-   treating the setup as loopback-only.
+   network. `--enable` now refuses to activate the bridge when the host
+   reports `true`, querying it from the VM via
+   `mac orb config get machines.expose_ports_to_lan`; an undeterminable value
+   warns and must never be treated as safe. `--status` reports the setting too.
+   For a raw VM, `bash scripts/setup_rdp_env.sh` installs the desktop and xrdp
+   and enables the bridge in step 5; the OrbStack setting and the Linux
+   password stay manual and are not restorable from a clone.
    `scripts/connect_rdp_mac.sh` remains a manual SSH-tunnel fallback and exits
    cleanly instead of starting a second tunnel when port 13389 is taken.
 2. Diagnose availability in layers before changing configuration:

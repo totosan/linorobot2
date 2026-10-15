@@ -51,7 +51,14 @@ den einzelnen Test ausdrücklich freigegeben hat.
   echtem VM-Neustart kam die Brücke ohne manuellen Eingriff hoch, und der
   Client verband sich mit dem unveränderten Profil. Die OrbStack-Einstellung
   `machines.expose_ports_to_lan` steht auf `false`, weil der Default den
-  RDP-Login sonst im Heim-LAN erreichbar macht.
+  RDP-Login sonst im Heim-LAN erreichbar macht; seit dem 15.10.2026 erzwingt
+  `configure_rdp_bridge.sh --enable` das selbst und `setup_rdp_env.sh`
+  aktiviert die Brücke in Schritt 5.
+- **Frischclone offen geblieben:** Ein Clone stellt das RDP-Tooling vollständig
+  her (belegt mit Temp-Clone und grüner Testsuite), aber **nicht** die aktive
+  `.github`-Kopie im Workspace-Root, `.vscode`, `.env` und die
+  OrbStack-Einstellung. Ein End-to-End-Lauf von `setup_rdp_env.sh` auf einer
+  rohen VM steht weiterhin aus.
 - **RDP-Reconnect und 1280×800 bestätigt am 15.10.2026:** Der lokale Tunnel,
   beide Guest-Loopback-Listener und der Reconnect auf die bestehende
   Xorg-Sitzung `:10.0` bestanden. `xrandr` meldete 1280×800. Die

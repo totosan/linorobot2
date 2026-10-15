@@ -4,7 +4,9 @@
 # auf dem Mac kein SSH-Tunnel und kein LaunchAgent mehr noetig ist.
 #
 # Zugriffsgrenze: erreichbar vom Mac und von anderen OrbStack-Maschinen auf dem
-# Host-Bridge-Netz. Nicht aus dem Heim-LAN, da der Mac kein IP-Forwarding macht.
+# Host-Bridge-Netz. Nicht aus dem Heim-LAN, solange OrbStack
+# machines.expose_ports_to_lan=false gesetzt hat; --enable prueft das und
+# verweigert die Aktivierung bei true.
 # xrdp selbst bleibt auf 127.0.0.1:3389; configure_rdp.py wird nicht angefasst.
 set -euo pipefail
 
@@ -16,10 +18,41 @@ SERVICE_UNIT="${UNIT_DIR}/${UNIT_NAME}.service"
 BRIDGE_PORT="${RDP_BRIDGE_PORT:-13389}"
 XRDP_TARGET="${RDP_BRIDGE_TARGET:-127.0.0.1:3389}"
 PROXY_BIN="/usr/lib/systemd/systemd-socket-proxyd"
+LAN_EXPOSURE_KEY="machines.expose_ports_to_lan"
 
 usage() {
-    echo "Usage: $0 --enable | --disable | --status | --print-units" >&2
+    echo "Usage: $0 --enable | --disable | --status | --print-units | --check-exposure" >&2
     exit 2
+}
+
+# Die Aussengrenze setzt nicht diese Unit, sondern OrbStack: forward_ports
+# spiegelt VM-Ports auf den Mac, und expose_ports_to_lan entscheidet, ob diese
+# Weiterleitung an * oder nur an 127.0.0.1 bindet. Der Default ist true; dann
+# ist der RDP-Login aus dem gesamten LAN erreichbar. Abfrage des Hosts ueber
+# die OrbStack-Gastbruecke "mac", weil "orb config" ein Mac-Kommando ist.
+check_lan_exposure() {
+    local setting=""
+    if ! command -v mac >/dev/null 2>&1; then
+        echo "WARN: ${LAN_EXPOSURE_KEY} nicht pruefbar (kein mac-Kommando)." >&2
+        echo "WARN: Auf dem Mac pruefen: orb config get ${LAN_EXPOSURE_KEY}" >&2
+        return 0
+    fi
+    setting="$(mac orb config get "$LAN_EXPOSURE_KEY" 2>/dev/null | tr -d '[:space:]')" || setting=""
+    case "$setting" in
+        false)
+            echo "OK: ${LAN_EXPOSURE_KEY}=false; Mac-Weiterleitung bindet nur Loopback."
+            ;;
+        true)
+            echo "FAIL: ${LAN_EXPOSURE_KEY}=true; die Bruecke waere LAN-weit erreichbar." >&2
+            echo "Auf dem Mac setzen, danach OrbStack neu starten (orb stop/start):" >&2
+            echo "  orb config set ${LAN_EXPOSURE_KEY} false" >&2
+            return 1
+            ;;
+        *)
+            echo "WARN: ${LAN_EXPOSURE_KEY} unbestimmt (Antwort: '${setting:-leer}')." >&2
+            echo "WARN: Auf dem Mac pruefen: orb config get ${LAN_EXPOSURE_KEY}" >&2
+            ;;
+    esac
 }
 
 require_linux_vm() {
@@ -109,8 +142,12 @@ case "$1" in
         echo "### ${SERVICE_UNIT}"
         render_service_unit
         ;;
+    --check-exposure)
+        check_lan_exposure
+        ;;
     --enable)
         require_linux_vm
+        check_lan_exposure
         [[ -x "$PROXY_BIN" ]] || {
             echo "FAIL: systemd-socket-proxyd fehlt: $PROXY_BIN" >&2
             exit 1
@@ -145,6 +182,7 @@ case "$1" in
         systemctl is-active "${UNIT_NAME}.service" 2>&1 | sed 's/^/service active: /' || true
         ss -lnt 2>/dev/null | grep -E ":(${BRIDGE_PORT}|3389|3350)\b" \
             || echo "Keine passenden Listener gefunden."
+        check_lan_exposure || true
         ;;
     *) usage ;;
 esac

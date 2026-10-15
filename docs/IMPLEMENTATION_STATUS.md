@@ -4,6 +4,27 @@ Stand: 15.10.2026. Dieses Dokument hält Nachweise, tatsächliche Laufzeit und b
 
 ## Aktueller Gate- und Phasenstatus
 
+- **Frischclone-Reproduzierbarkeit am 15.10.2026 teilweise belegt:** Ein echter
+    `git clone --depth 1 --branch g9-reproducible-lifecycle` vom Remote in ein
+    Temp-Verzeichnis enthielt alle RDP-Artefakte; die Testsuite lief dort mit
+    18/18 grün, `--print-units` rendete korrekt und die Executable-Bits blieben
+    erhalten. In den getrackten Skripten gibt es **keine** hartkodierten
+    Mac-Pfade (Auflösung über `BASH_SOURCE`), und `prepare_sim_release.sh` klont
+    vom Remote direkt in die VM. Damit ist das Szenario „VM bereits aufgesetzt"
+    belegt; der VM-Zustand (xrdp, `/etc/xrdp`, Brücken-Units,
+    `~/.local/bin/linobot2-rdp-session`, Gruppe, Passwortstatus `P`,
+    `.bashrc`-Block) überlebt das Löschen des Mac-Verzeichnisses. **Nicht aus
+    einem Clone wiederherstellbar** sind die aktive `.github`-Kopie im
+    Workspace-Root (dort ist kein Git-Repo), `.vscode/settings.json`, `.env`
+    sowie die OrbStack-Einstellung. Das Szenario „Roh-VM" ist **nicht gemessen**;
+    `setup_rdp_env.sh` deckt den Weg inhaltlich ab, wurde aber nie end-to-end auf
+    einer rohen VM ausgeführt. Als Reaktion aktiviert `setup_rdp_env.sh` die
+    Brücke jetzt in Schritt 5 selbst, und `configure_rdp_bridge.sh --enable`
+    verweigert die Aktivierung bei `machines.expose_ports_to_lan=true` (Abfrage
+    über `mac orb config get`; nicht ermittelbarer Wert gilt als Warnung, nicht
+    als sicher). Testsuite danach 22/22 grün auf dem Mac und 22 (3 Skips) in der
+    VM; der Live-Guard meldete `false`.
+
 - **VM-seitiger RDP-Autostart am 15.10.2026 bestanden:** Der Mac-SSH-Tunnel ist
     als Voraussetzung entfallen. In der VM leiten
     `linorobot2-rdp-bridge.socket`/`.service` Port 13389 per

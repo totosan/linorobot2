@@ -191,6 +191,46 @@ class RdpBridgeUnitTests(unittest.TestCase):
         self.assertIn("gehoert in die VM", result.stderr)
 
 
+class RdpLanExposureGuardTests(unittest.TestCase):
+    """OrbStack, nicht die Unit, setzt die Aussengrenze der Bruecke."""
+
+    def _check(self, mac_body):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            if mac_body is not None:
+                _stub(root, "mac", mac_body)
+            environment = dict(os.environ, PATH=f"{root}:/usr/bin:/bin")
+            return subprocess.run(
+                ["bash", BRIDGE, "--check-exposure"], text=True,
+                capture_output=True, env=environment,
+            )
+
+    def test_lan_exposed_host_blocks_the_bridge(self):
+        result = self._check('#!/bin/sh\necho true\n')
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("LAN-weit erreichbar", result.stderr)
+        self.assertIn("orb config set machines.expose_ports_to_lan false",
+                      result.stderr)
+
+    def test_loopback_only_host_is_accepted(self):
+        result = self._check('#!/bin/sh\necho false\n')
+        self.assertEqual(result.returncode, 0)
+        self.assertIn("bindet nur Loopback", result.stdout)
+
+    def test_unreadable_host_setting_warns_without_claiming_safety(self):
+        # Ein nicht ermittelbarer Hostzustand darf weder als sicher gelten noch
+        # die Einrichtung blockieren; er muss sichtbar bleiben.
+        for body in (None, '#!/bin/sh\nexit 1\n'):
+            result = self._check(body)
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("WARN", result.stderr)
+            self.assertNotIn("bindet nur Loopback", result.stdout)
+
+    def test_setup_enables_the_bridge_instead_of_only_printing_a_hint(self):
+        setup = Path(__file__).with_name("setup_rdp_env.sh").read_text()
+        self.assertIn("configure_rdp_bridge.sh\" --enable", setup)
+
+
 class RdpTunnelFallbackTests(unittest.TestCase):
     @unittest.skipUnless(ON_DARWIN, "Der Tunnel laeuft nur auf dem Mac")
     def test_existing_listener_prevents_second_tunnel(self):

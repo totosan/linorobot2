@@ -1,12 +1,12 @@
 # Aktueller RDP-Zugriff auf die Simulationsumgebung
 
-Stand: 15.10.2026. Dies beschreibt die vorhandene OrbStack-VM `ros-humble`, nicht eine Neuinstallation.
+Stand: 15.10.2026. Der Hauptteil beschreibt die vorhandene OrbStack-VM `ros-humble`; der Abschnitt „Einrichtung in einer Roh-VM" nennt den Weg für eine Neuinstallation und dessen Grenzen.
 
 ## Verbindung vom Mac
 
 1. In Windows App das bestehende RDP-Profil mit Ziel **`127.0.0.1:13389`** öffnen; kein Gateway verwenden. **Ein SSH-Tunnel und ein offenes Terminal sind nicht mehr nötig.**
 2. Die Verbindung läuft über eine VM-seitige systemd-Brücke, die mit der VM startet: `linorobot2-rdp-bridge.socket` lauscht auf Port 13389 und leitet per `systemd-socket-proxyd` an das unverändert loopback-gebundene xrdp `127.0.0.1:3389` weiter. OrbStack spiegelt diesen VM-Port auf `127.0.0.1:13389` des Macs.
-3. Verwaltung in der VM: `bash scripts/configure_rdp_bridge.sh --status`, `--enable`, `--disable`. Die Units liegen unter `/etc/systemd/system/linorobot2-rdp-bridge.{socket,service}` und tragen den Marker `# X-Linorobot2-Managed: true`; fremde Units werden nicht überschrieben.
+3. Verwaltung in der VM: `bash scripts/configure_rdp_bridge.sh --status`, `--enable`, `--disable`, `--check-exposure`. Die Units liegen unter `/etc/systemd/system/linorobot2-rdp-bridge.{socket,service}` und tragen den Marker `# X-Linorobot2-Managed: true`; fremde Units werden nicht überschrieben.
 4. Nicht mit `127.0.0.1:3389` auf dem Mac verbinden. Port 3389 ist der Guest-Loopback-Dienst in der VM.
 5. Fallback, falls die Brücke bewusst deaktiviert ist: `bash ./src/linorobot2/scripts/connect_rdp_mac.sh` startet den alten SSH-Tunnel. Das Skript bricht sauber ab, wenn Port 13389 bereits belegt ist, und startet keinen zweiten Tunnel.
 
@@ -19,7 +19,18 @@ Die Brücke ersetzt die SSH-Vorauthentisierung durch den xrdp-Login (TLS, `Termi
 | `machines.forward_ports` | `true` | VM-Port erscheint auf dem Mac |
 | `machines.expose_ports_to_lan` | **`false`** | Mac bindet nur `127.0.0.1:13389` |
 
-**Diese Einstellung ist sicherheitsrelevant.** Mit `machines.expose_ports_to_lan=true` bindet OrbStack die Weiterleitung auf `*:13389`, wodurch der RDP-Login am 15.10.2026 nachweislich unter der LAN-Adresse `192.168.0.174:13389` erreichbar war; die macOS-Firewall ist deaktiviert. Nach `orb config set machines.expose_ports_to_lan false` und einem OrbStack-Neustart war nur noch `127.0.0.1:13389` gebunden und die LAN-Adresse nicht mehr erreichbar. Änderungen an dieser Einstellung vor einem RDP-Lauf prüfen. Die VM bleibt zusätzlich über `ros-humble.orb.local:13389` erreichbar; dieses Host-Bridge-Netz ist nicht geroutet (`net.inet.ip.forwarding=0`).
+**Diese Einstellung ist sicherheitsrelevant.** Mit `machines.expose_ports_to_lan=true` bindet OrbStack die Weiterleitung auf `*:13389`, wodurch der RDP-Login am 15.10.2026 nachweislich unter der LAN-Adresse `192.168.0.174:13389` erreichbar war; die macOS-Firewall ist deaktiviert. Nach `orb config set machines.expose_ports_to_lan false` und einem OrbStack-Neustart war nur noch `127.0.0.1:13389` gebunden und die LAN-Adresse nicht mehr erreichbar. Die VM bleibt zusätzlich über `ros-humble.orb.local:13389` erreichbar; dieses Host-Bridge-Netz ist nicht geroutet (`net.inet.ip.forwarding=0`).
+
+`configure_rdp_bridge.sh --enable` prüft diese Einstellung seit dem 15.10.2026 selbst und verweigert die Aktivierung bei `true`; `--status` gibt sie mit aus und `--check-exposure` prüft sie einzeln. Abgefragt wird der Host aus der VM über die OrbStack-Gastbrücke `mac orb config get machines.expose_ports_to_lan`. Ist der Wert nicht ermittelbar, warnt das Skript sichtbar und wertet das **nicht** als sicher.
+
+## Einrichtung in einer Roh-VM
+
+`bash scripts/setup_rdp_env.sh` deckt die Installation ab (XFCE, xrdp, xorgxrdp, Mesa, TLS, Loopback-Konfiguration, Gruppe `linobot2-rdp`, Sitzungsdatei) und aktiviert in Schritt 5 die Brücke. Zwei Schritte bleiben bewusst manuell und sind aus einem Clone **nicht** wiederherstellbar:
+
+1. `orb config set machines.expose_ports_to_lan false` auf dem Mac (OrbStack-Default ist `true`), danach OrbStack neu starten.
+2. Das Linux-Passwort des RDP-Benutzers über `sudo passwd <user>` direkt im VM-Terminal; das Skript meldet den Status und speichert kein Passwort.
+
+Ein End-to-End-Lauf auf einer tatsächlich rohen VM ist bisher **nicht** durchgeführt worden; der Pfad ist aus den Skriptinhalten belegt, nicht gemessen.
 
 ## Standardumgebung in jeder neuen VM-Bash
 

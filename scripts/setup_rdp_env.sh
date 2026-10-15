@@ -19,7 +19,7 @@ for service in xrdp.service xrdp-sesman.service; do
     }
 done
 
-echo "[1/4] Installiere XFCE, xorgxrdp und Mesa (bestehende RDP-Verbindungen werden getrennt)."
+echo "[1/5] Installiere XFCE, xorgxrdp und Mesa (bestehende RDP-Verbindungen werden getrennt)."
 sudo -n systemctl daemon-reload
 if command -v xrdp >/dev/null; then
     sudo -n systemctl stop xrdp.service xrdp-sesman.service
@@ -33,7 +33,7 @@ sudo -n env DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recom
     xfce4 xfce4-terminal xrdp xorgxrdp xserver-xorg-core \
     dbus-x11 mesa-utils libgl1-mesa-dri ssl-cert python3 openssl
 
-echo "[2/4] Konfiguriere Loopback, TLS und eingeschränkten Login."
+echo "[2/5] Konfiguriere Loopback, TLS und eingeschränkten Login."
 sudo -n groupadd -f linobot2-rdp
 sudo -n usermod -aG linobot2-rdp "$RDP_USER"
 sudo -n usermod -aG ssl-cert xrdp
@@ -41,7 +41,7 @@ sudo -n python3 "$SCRIPT_DIR/configure_rdp.py"
 sudo -n -u xrdp test -r /etc/xrdp/cert.pem
 sudo -n -u xrdp test -r /etc/xrdp/key.pem
 
-echo "[3/4] Installiere lokale XFCE-Sitzung für $RDP_USER."
+echo "[3/5] Installiere lokale XFCE-Sitzung für $RDP_USER."
 mkdir -p "$HOME/.local/bin"
 SESSION_FILE="$HOME/.local/bin/linobot2-rdp-session"
 [[ ! -L "$SESSION_FILE" ]] || { echo "[FEHLER] Sitzungsdatei ist ein Symlink: $SESSION_FILE"; exit 1; }
@@ -50,7 +50,7 @@ if [[ -f "$SESSION_FILE" ]] && ! cmp -s "$SCRIPT_DIR/rdp_session.sh" "$SESSION_F
 fi
 install -m 0755 "$SCRIPT_DIR/rdp_session.sh" "$SESSION_FILE"
 
-echo "[4/4] Aktiviere Dienste und prüfe Listener."
+echo "[4/5] Aktiviere Dienste und prüfe Listener."
 sudo -n systemctl daemon-reload
 sudo -n systemctl unmask --runtime xrdp.service xrdp-sesman.service
 sudo -n systemctl enable xrdp.service xrdp-sesman.service
@@ -59,8 +59,20 @@ systemctl is-active --quiet xrdp.service xrdp-sesman.service
 python3 "$SCRIPT_DIR/check_rdp_ready.py"
 openssl x509 -in /etc/xrdp/cert.pem -noout -fingerprint -sha256
 
+echo "[5/5] Aktiviere die VM-seitige RDP-Brücke (Autostart ohne Mac-Tunnel)."
+# Ab hier ist die loopback-gebundene RDP-Installation vollstaendig und soll bei
+# einem Bruecken-Fehler nicht wieder maskiert werden.
+trap - ERR
+# Bricht ab, wenn OrbStack machines.expose_ports_to_lan=true hat; die Brücke
+# waere sonst aus dem gesamten LAN erreichbar.
+if ! bash "$SCRIPT_DIR/configure_rdp_bridge.sh" --enable; then
+    echo "[WARNUNG] Brücke nicht aktiviert; xrdp läuft weiter auf 127.0.0.1:3389." >&2
+    echo "Ursache oben beheben, dann: bash scripts/configure_rdp_bridge.sh --enable" >&2
+    echo "Bis dahin als Fallback auf dem Mac: scripts/connect_rdp_mac.sh" >&2
+fi
+
 echo "Mac: RDP-Client mit 127.0.0.1:13389 verbinden, Benutzer $RDP_USER, Sitzung Xorg."
-echo "Brücke in der VM aktivieren: bash scripts/configure_rdp_bridge.sh --enable (ohne sie: scripts/connect_rdp_mac.sh als Tunnel-Fallback)."
+echo "Brücke prüfen: bash scripts/configure_rdp_bridge.sh --status (Tunnel-Fallback: scripts/connect_rdp_mac.sh)."
 PASSWORD_STATE="$(passwd -S "$RDP_USER" | awk '{print $2}')"
 case "$PASSWORD_STATE" in
     L|NP)

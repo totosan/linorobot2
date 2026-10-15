@@ -20,7 +20,7 @@ abgeschwächt.
 
 | Rang | Offener Punkt | Priorität | Aufwand | Einordnung |
 | ---: | --- | --- | --- | --- |
-| 1 | G9: frischen Workspace-Aufbau sowie Start-/Stop-/Rollback-Ablauf vervollständigen | P1 – Software-Lifecycle | M | Lokal ausführbar. Humble-/Fortress-EOL-Review vor Mai 2027 als eigener späterer Teilschritt. |
+| 1 | G9: Releaseaktivierung und Rollback-Drill vervollständigen | P1 – Software-Lifecycle | S | Remote-Frischcheckout, isolierter Build, 463 ROS-freie Tests und bewegungsloser Headless-Smoke bestehen. Offen sind zweiter validierter Release, atomare Aktivierung und Rückfall. Humble-/Fortress-EOL-Review bleibt ein eigener späterer Teilschritt. |
 | 2 | G3-Yaw-Bias mit den vorgeschlagenen Physikschritt- und Kontaktvarianten-Proben weiter eingrenzen | P2 – optionale SIL-Untersuchung | M | Nur nach bestehendem Analyseplan; keine Änderung von Hardwareparametern und keine Übertragung des Simulatorfaktors. |
 | 3 | RDP-Auflösung nach dem nächsten regulären Reconnect verifizieren | P3 – Betriebskomfort | XS–S | Nur beobachten; keine erzwungene RandR-/Framebuffer-Änderung. Gazebo-Autostart bleibt optional und wird nicht ohne Bedarf aktiviert. |
 

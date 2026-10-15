@@ -91,6 +91,18 @@ if ps -eo args= | grep -F "$IGN_PARTITION" | grep -v grep >"${LOG_DIR}/process-r
     echo "FAIL: simulator process residue remains; see ${LOG_DIR}/process-residue.txt." >&2
     exit 1
 fi
+ros2 daemon stop >"${LOG_DIR}/daemon-stop.txt" 2>&1 || true
+sleep 2
+ROS2CLI_DISABLE_DAEMON=1 ros2 node list >"${LOG_DIR}/nodes-after-stop.txt" 2>&1 || true
+if [[ -s "${LOG_DIR}/nodes-after-stop.txt" ]]; then
+    echo "FAIL: ROS nodes remain after simulator cleanup." >&2
+    exit 1
+fi
+if ROS2CLI_DISABLE_DAEMON=1 ros2 topic info /clock \
+        >"${LOG_DIR}/clock-after-stop.txt" 2>&1; then
+    echo "FAIL: /clock remains discoverable after daemonless cleanup check." >&2
+    exit 1
+fi
 
 python3 "${SOURCE_ROOT}/scripts/sim_release.py" manifest \
     --release "$RELEASE_ROOT" \

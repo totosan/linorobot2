@@ -11,8 +11,11 @@ COMMIT=""
 RELEASE_ID=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --remote=*) REMOTE="${1#*=}"; shift ;;
         --remote) REMOTE="$2"; shift 2 ;;
+        --commit=*) COMMIT="${1#*=}"; shift ;;
         --commit) COMMIT="$2"; shift 2 ;;
+        --release-id=*) RELEASE_ID="${1#*=}"; shift ;;
         --release-id) RELEASE_ID="$2"; shift 2 ;;
         *) echo "FAIL: unknown argument: $1" >&2; exit 2 ;;
     esac

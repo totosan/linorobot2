@@ -4,16 +4,27 @@ Stand: 15.10.2026. Dieses Dokument hält Nachweise, tatsächliche Laufzeit und b
 
 ## Aktueller Gate- und Phasenstatus
 
-- **G9 in Implementierung, noch kein PASS:** Aktive Projektdokumente,
+- **G9 in Implementierung, Rollback-Drill noch offen:** Aktive Projektdokumente,
     Betriebs-/Testskripte, projektbezogene Copilot-Anweisungen und das
     RDP-Profil wurden in den Fork integriert. Releasewerkzeuge erzeugen
     getrennte Build-/Install-/Logpfade, schreiben Commit-/Versionsmanifeste und
     aktivieren nur validierte Releases über atomare `active`/`previous`-
     Symlinks. 463 ROS-freie Tests bestehen in der Humble-VM (14 erwartete
-    Skips); ein isolierter lokaler Entwicklungsbuild unter
-    `/home/toto/linobot2_sim/releases/g9-dev-local-20261015` bestand für fünf
-    Simulationspakete. Das ist noch kein G9-Nachweis: Remote-Commit,
-    Frischcheckout, bewegungsloser G1-Headless-Smoke und Rollback-Drill fehlen.
+    Skips). Der gepushte Fork-Commit
+    `b510358c5181d4acdcc4f32eb435ca20a57593de` wurde am 15.10.2026 frisch nach
+    `/home/toto/linobot2_sim/releases/g9-ref-b510358/source` geklont. Fünf
+    Simulationspakete bauten in getrennte Releasepfade; dieselben 463 Tests
+    bestanden dort. Der bewegungslose Domain-42-Headless-Smoke empfing
+    `/clock`, Scan, IMU, 640×480-Bild und CameraInfo über 5 s, fand kein Nav2
+    und nur den erwarteten inaktiven Command-Timeout-Publisher auf `/cmd_vel`.
+    Supervisor-/Gazebo-Prozesse wurden vollständig beendet; der zunächst über
+    die normale CLI sichtbare `/clock`-Eintrag war Discovery-Cache und war nach
+    Stop des CLI-Daemons bei daemonloser Prüfung verschwunden. Manifeststatus
+    ist `passed`; Evidenz:
+    `/home/toto/linobot2_sim/releases/g9-ref-b510358/evidence/release-manifest.json`
+    und `log/g9-smoke-20261015-080529/`. G9 bleibt offen, bis ein zweiter
+    validierter Release aktiviert und der atomare Rollback praktisch
+    bestanden ist.
     Verbindlicher Ablauf: [`G9_LIFECYCLE.md`](G9_LIFECYCLE.md).
 - **G3-Diskriminatoren implementiert, Runtimeproben offen:** Der G2-Harness
     akzeptiert test-only ausschließlich `0,001` oder `0,0005 s`

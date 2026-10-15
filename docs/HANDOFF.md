@@ -19,9 +19,10 @@ Die alte ausführliche Übergabe bleibt als [`archive/HANDOFF_2026-10-07.md`](ar
 - **Nächste Arbeit:** G9 ist mit zwei Remote-Frischreleases, Headless-Smokes und
   atomarem Rollback bestanden. Die G3-Diskriminatoren sind abgeschlossen:
   halbierter Physikschritt und Caster-Nullreibung änderten den Faktor nicht
-  messbar; Caster-Entfernung war physikalisch ungültig. Offen bleibt die
-  RDP-Auflösung nach regulärem Reconnect; am 15.10.2026 war die Sitzung nicht
-  verfügbar. Pi-/Jetson-/HIL-Arbeit bleibt nachgelagert.
+  messbar; Caster-Entfernung war physikalisch ungültig. Der RDP-Reconnect
+  bestand mit 1280×800 und ausschließlich lokalen Tunnel-/Guest-Listenern.
+  Damit ist keine weitere hardwareunabhängige Arbeit offen;
+  Pi-/Jetson-/HIL-Arbeit bleibt nachgelagert.
 - **TF2:** gepinnter Humble-Fix manuell per A/B geprüft. Original reproduziert den Deadlock, Overlay besteht 11/11 upstream Buffer-Tests. `/opt/ros` wurde nicht überschrieben.
 - **Run 25:** PASS für freie Fahrt und Hindernisumfahrung mit TF2-Fix. Log: `/home/toto/linobot2_sim/log/g4-nav-20261007-134435-LJ0KXV/`. Die Navigation nutzt eine Ground-Truth-assistierte Map-Fixture; kein sensor-only SLAM-/Hardwaretransferbeweis.
 - **Run 29:** Mapping und sensor-derived Map-Preparation bestanden (3.144 neue known, 3.768 known, 171 occupied, Mindest-Clearance `0,302 m`). Nav2-Readiness scheiterte wegen doppeltem Fortress-Start im Map-Reuse; TF-Zeitsprünge, sechs inaktive Lifecycle-Nodes, keine Goals.

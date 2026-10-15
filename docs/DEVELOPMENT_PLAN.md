@@ -686,9 +686,10 @@ Abnahmen.
 
 **Nächster Einstieg (15.10.2026):** Der G4/G5-Nav2-Input-Replay, G9-
 Frischaufbau/Start/Stop/Rollback und die optionalen G3-Yaw-Bias-
-Diskriminatoren sind abgeschlossen. Hardwareunabhängig offen bleibt nur die
-RDP-Auflösungsbeobachtung nach einem regulären Reconnect; die Sitzung war am
-15.10.2026 nicht verfügbar. Die priorisierte Liste steht
+Diskriminatoren sind abgeschlossen. Die letzte hardwareunabhängig offene
+RDP-Auflösungsbeobachtung nach einem regulären Reconnect bestand am
+15.10.2026 mit 1280×800 und sicheren Loopback-Listenern. Damit ist aktuell
+keine weitere hardwareunabhängige Folgearbeit offen. Die priorisierte Liste steht
 in [`OPEN_TASKS.md`](OPEN_TASKS.md). Ein echter `.71`-Livevergleich ist optional;
 Pi-/Jetson-/HIL-Arbeiten bleiben nachgelagerte Transferpfade mit ihren
 Sicherheits- und Freigabevoraussetzungen. Der lokale `yolo12n`-CPU-Nachweis ist

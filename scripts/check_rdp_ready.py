@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Wartet begrenzt auf RDP; verbietet nichtlokale Listener auch während des Starts."""
+"""Wartet begrenzt auf sichere lokale RDP-Listener."""
 
 import ipaddress
-import socket
 import subprocess
 import threading
 import time
@@ -34,24 +33,15 @@ def read_listeners():
     )
 
 
-def connect_rdp():
-    with socket.create_connection(("127.0.0.1", 3389), timeout=1):
-        pass
-
-
-def wait_ready(timeout=15, read_rows=read_listeners, connect=connect_rdp,
-               clock=time.monotonic, pause=None):
+def wait_ready(timeout=15, read_rows=read_listeners, clock=time.monotonic,
+               pause=None):
     pause = pause or threading.Event().wait
     deadline = clock() + timeout
     last_rows = ""
     while True:
         last_rows = read_rows()
         if listener_state(last_rows):
-            try:
-                connect()
-                return last_rows
-            except OSError:
-                pass  # Socket kann zwischen ss-Abfrage und connect noch nicht bereit sein.
+            return last_rows
         remaining = deadline - clock()
         if remaining <= 0:
             raise TimeoutError(f"RDP nach {timeout}s nicht bereit. Listener:\n{last_rows or '(keine)'}")

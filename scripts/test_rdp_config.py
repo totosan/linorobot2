@@ -75,29 +75,14 @@ class RdpReadinessTests(unittest.TestCase):
 
     def test_waits_for_delayed_listener(self):
         snapshots = iter([self.SESMAN, self.RDP + self.SESMAN])
-        connections = []
-        rows = wait_ready(read_rows=lambda: next(snapshots),
-                          connect=lambda: connections.append(True), pause=lambda _: None)
+        rows = wait_ready(read_rows=lambda: next(snapshots), pause=lambda _: None)
         self.assertEqual(rows, self.RDP + self.SESMAN)
-        self.assertEqual(connections, [True])
 
     def test_bounded_timeout_without_rdp(self):
         ticks = iter([0, 1, 16])
         with self.assertRaises(TimeoutError):
             wait_ready(read_rows=lambda: self.SESMAN, clock=lambda: next(ticks),
                        pause=lambda _: None)
-
-    def test_tcp_connection_race_retried(self):
-        attempts = []
-
-        def connect():
-            attempts.append(True)
-            if len(attempts) == 1:
-                raise ConnectionRefusedError()
-
-        wait_ready(read_rows=lambda: self.RDP + self.SESMAN,
-                   connect=connect, pause=lambda _: None)
-        self.assertEqual(len(attempts), 2)
 
     def test_unsafe_listener_rejected_without_waiting(self):
         with self.assertRaises(ValueError):

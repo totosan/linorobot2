@@ -1,6 +1,6 @@
 # Offene Arbeiten: G6 und spätere Transfer-Gates
 
-Stand: 14.10.2026. Diese Datei enthält offene Arbeit und klar gekennzeichnete
+Stand: 15.10.2026. Diese Datei enthält offene Arbeit und klar gekennzeichnete
 Abschlussnachweise. Die aktuelle Reihenfolge zieht alle lokal ausführbaren,
 hardwareunabhängigen Arbeiten vor Hardware-/Gerätezugriffen. Sicherheits-
 Vorbedingungen für spätere Transferarbeiten bleiben verbindlich. Der
@@ -18,9 +18,7 @@ abgeschwächt.
 
 ### Jetzt: hardwareunabhängige Arbeit
 
-| Rang | Offener Punkt | Priorität | Aufwand | Einordnung |
-| ---: | --- | --- | --- | --- |
-| 1 | RDP-Auflösung nach dem nächsten regulären Reconnect verifizieren | P3 – Betriebskomfort | XS–S | RDP-Sitzung am 15.10.2026 nicht verfügbar; Punkt bleibt blockiert. Nur beobachten, keine RandR-/Framebuffer-Änderung und kein Autostart. |
+Derzeit ist kein weiterer hardwareunabhängiger Punkt offen.
 
 ### Danach: externe und hardwareabhängige Transferarbeiten
 
@@ -30,12 +28,12 @@ abgeschwächten Empfehlungen.
 
 | Rang | Offener Punkt | Priorität | Aufwand | Vorbedingung / Einordnung |
 | ---: | --- | --- | --- | --- |
-| 2 | Optional einen einzelnen echten Inferenzlauf auf Jetson `.71` prüfen | P2 – optional, nur bei gewünschtem Hardware-Inferenzvergleich | S–M | Nutzer kann `.71` bei Bedarf starten. Danach Dienst-/Engine-Hash und Labelmapping gegen den archivierten Nachweis verifizieren und genau einen freigegebenen Request mit klarem Bildursprung ausführen. Der frühere externe Einbildlauf lieferte null Detektionen; positive Erkennung und ROS-Contract-v1-Transport sind damit noch nicht belegt. Kein Motor-/Nav2-Test. |
-| 3 | Vollständiges Jetson-/QSPI-Systemabbild sichern | P1 – Werterhalt vor invasiven Jetson-Arbeiten | M | Kein Blocker für lokale SIL-Arbeit; vor invasiven Änderungen erforderlich. |
-| 4 | Jetson-Hardwarevoraussetzungen verifizieren: Firmwaretransport/Baudrate, Middleware/RMW, Geräteanwesenheit und Alias-/Kabelrollen | P1 – vor physischem Betrieb | M–L | Software-Preflight erkennt keinen Kabeltausch identischer UART-Geräte. Kein sensorführender Bringup vor Klärung. |
-| 5 | Pi-SSH-Host-Key unabhängig out-of-band verifizieren | P0 – Sicherheitsblocker bei Pi-Zugriff | XS, sobald ein vertrauenswürdiger Vergleichswert vorliegt; derzeit blockiert | Vor jeder Pi-Verbindung. Bis zur unabhängigen Prüfung keine Verbindung und keine Änderung an `known_hosts`. |
-| 6 | G7: motorloses Pi-/ESP32-HIL vorbereiten und prüfen | P1 – Transfergate | L | Erst nach Host-Key-Verifikation, bestätigter physischer Motortrennung und separater Freigabe. Keine Firmware- oder Motoraktion. |
-| 7 | G8: physische Abnahme von Geometrie/Sensorposen, Not-Aus, Stoppverhalten und Limits | P2 – spätere Hardwareabnahme | L | Erst nach G7, auf sicherem Prüfstand und mit eigener Freigabe. SIL-Werte nicht als Hardwaremesswerte übernehmen. |
+| 1 | Optional einen einzelnen echten Inferenzlauf auf Jetson `.71` prüfen | P2 – optional, nur bei gewünschtem Hardware-Inferenzvergleich | S–M | Nutzer kann `.71` bei Bedarf starten. Danach Dienst-/Engine-Hash und Labelmapping gegen den archivierten Nachweis verifizieren und genau einen freigegebenen Request mit klarem Bildursprung ausführen. Der frühere externe Einbildlauf lieferte null Detektionen; positive Erkennung und ROS-Contract-v1-Transport sind damit noch nicht belegt. Kein Motor-/Nav2-Test. |
+| 2 | Vollständiges Jetson-/QSPI-Systemabbild sichern | P1 – Werterhalt vor invasiven Jetson-Arbeiten | M | Kein Blocker für lokale SIL-Arbeit; vor invasiven Änderungen erforderlich. |
+| 3 | Jetson-Hardwarevoraussetzungen verifizieren: Firmwaretransport/Baudrate, Middleware/RMW, Geräteanwesenheit und Alias-/Kabelrollen | P1 – vor physischem Betrieb | M–L | Software-Preflight erkennt keinen Kabeltausch identischer UART-Geräte. Kein sensorführender Bringup vor Klärung. |
+| 4 | Pi-SSH-Host-Key unabhängig out-of-band verifizieren | P0 – Sicherheitsblocker bei Pi-Zugriff | XS, sobald ein vertrauenswürdiger Vergleichswert vorliegt; derzeit blockiert | Vor jeder Pi-Verbindung. Bis zur unabhängigen Prüfung keine Verbindung und keine Änderung an `known_hosts`. |
+| 5 | G7: motorloses Pi-/ESP32-HIL vorbereiten und prüfen | P1 – Transfergate | L | Erst nach Host-Key-Verifikation, bestätigter physischer Motortrennung und separater Freigabe. Keine Firmware- oder Motoraktion. |
+| 6 | G8: physische Abnahme von Geometrie/Sensorposen, Not-Aus, Stoppverhalten und Limits | P2 – spätere Hardwareabnahme | L | Erst nach G7, auf sicherem Prüfstand und mit eigener Freigabe. SIL-Werte nicht als Hardwaremesswerte übernehmen. |
 
 Der Host-Key bleibt ein absoluter Sicherheitsblocker für Pi-Zugriff, auch wenn
 seine Prüfung in der Arbeitsreihenfolge erst unmittelbar vor dem Hardwarepfad
@@ -47,6 +45,11 @@ den einzelnen Test ausdrücklich freigegeben hat.
 
 ### Abgeschlossen / kein offener Punkt
 
+- **RDP-Reconnect und 1280×800 bestätigt am 15.10.2026:** Der lokale Tunnel,
+  beide Guest-Loopback-Listener und der Reconnect auf die bestehende
+  Xorg-Sitzung `:10.0` bestanden. `xrandr` meldete 1280×800. Die
+  Bereitschaftsprüfung erzeugt keine rohen TCP-Protokollfehler mehr; keine
+  RandR-Erzwingung oder Dienstneukonfiguration.
 - **G9 – PASS am 15.10.2026:** Zwei gepushte Fork-Commits wurden in getrennte
   Releaseverzeichnisse frisch geklont. Beide bestanden isolierten Build, 463
   ROS-freie Tests, bewegungslosen Domain-42-Headless-Smoke und Cleanup. Die
@@ -243,7 +246,10 @@ sind.
 
 **Vision-Kameraansicht:** Der Standard-Fortress-Launch unterstützt `vision_view:=true`. Damit startet er den vorhandenen Vision-Overlay-/Fusion-Launch samt RViz-Kamerabild; die Haupt-RViz-Instanz wird nicht doppelt geöffnet. Standardmäßig wird ausschließlich der synthetische Mock verwendet, keine externe Inferenz. Details und Aufruf stehen in der [`linorobot2_vision`-README](../src/linorobot2/linorobot2_vision/README.md).
 
-**Nebenläufiger RDP-Restpunkt:** `LP_NUM_THREADS=2` ist im Gazebo/RViz-Launcher und die CPU-Reduktion wurde im SIL beobachtet. `.rdp` fordert 1280×800, die laufende Sitzung zeigt bis zum nächsten Reconnect weiterhin 1920×1481. Der XDG-Gazebo-Autostart wurde vorbereitet, aber noch nicht aktiviert.
+**RDP-Abschluss:** `LP_NUM_THREADS=2` ist im Gazebo/RViz-Launcher und die
+CPU-Reduktion wurde im SIL beobachtet. Der Reconnect am 15.10.2026 aktivierte
+die vom `.rdp`-Profil geforderten 1280×800. Der optionale
+XDG-Gazebo-Autostart bleibt bewusst deaktiviert und ist kein offener Punkt.
 
 **Scope-Grenze:** Eine gemeinsame Geometriequelle für Fortress, Legacy und Hardware sowie physische Vermessung sind wichtige spätere Transfer-/HIL-Arbeit, aber kein Vorwand für eine G4-Großrefaktorierung. Für G4 reicht ein versioniertes, gehashtes Fortress-Profil; es darf nicht als Hardwaremodell ausgegeben werden.
 

@@ -59,7 +59,7 @@ systemctl is-active --quiet xrdp.service xrdp-sesman.service
 python3 "$SCRIPT_DIR/check_rdp_ready.py"
 openssl x509 -in /etc/xrdp/cert.pem -noout -fingerprint -sha256
 
-echo "Mac: RDP-Client mit 127.0.0.1:3389 verbinden, Benutzer $RDP_USER, Sitzung Xorg."
+echo "Mac: Tunnel mit scripts/connect_rdp_mac.sh starten und RDP-Client mit 127.0.0.1:13389 verbinden, Benutzer $RDP_USER, Sitzung Xorg."
 PASSWORD_STATE="$(passwd -S "$RDP_USER" | awk '{print $2}')"
 case "$PASSWORD_STATE" in
     L|NP)

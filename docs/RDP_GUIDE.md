@@ -5,7 +5,7 @@ Stand: 15.10.2026. Dies beschreibt die vorhandene OrbStack-VM `ros-humble`, nich
 ## Verbindung vom Mac
 
 1. Im Workspace-Terminal auf dem Mac den Tunnel starten und dieses Terminal offen lassen:
-   `bash ./scripts/connect_rdp_mac.sh`
+   `bash ./src/linorobot2/scripts/connect_rdp_mac.sh`
 2. In Windows App das bestehende RDP-Profil mit Ziel **`127.0.0.1:13389`** öffnen; kein Gateway verwenden.
 3. Nicht mit `127.0.0.1:3389` auf dem Mac verbinden. Port 3389 ist der Guest-Loopback-Dienst in der VM; der lokale SSH-Tunnel stellt ihn auf Mac-Port 13389 bereit.
 4. Keinen zweiten Tunnel starten, wenn Port 13389 bereits belegt ist. Den vorhandenen Listener prüfen oder das aktive Tunnelterminal weiterverwenden.
@@ -25,14 +25,16 @@ Der Autostart gilt nur für interaktive Bash-Shells; Skripte und Prozesse mit ei
 ## Simulationsdisplay
 
 - Linux-RDP-Display: `:10.0`; die bestätigte Grafik nutzt Mesa/llvmpipe (Software-Rendering).
-- Das Profil `ros-humble-rdp.rdp` fordert jetzt fest 1280×800 an und deaktiviert dynamische Auflösungsänderungen. Änderung greift erst nach vollständigem Trennen und erneutem Öffnen des RDP-Profils; Rückbau: Breite/Höhe im Profil wieder auf 1600×900 setzen und `dynamic resolution:i:1` setzen/entfernen.
+- Das Profil `ros-humble-rdp.rdp` fordert fest 1280×800 an und deaktiviert dynamische Auflösungsänderungen. Der reguläre Reconnect am 15.10.2026 stellte die bestehende Sitzung `:10.0` erfolgreich auf 1280×800 um. Rückbau: Breite/Höhe im Profil wieder auf 1600×900 setzen und `dynamic resolution:i:1` setzen/entfernen.
 - Für OrbStack-Aufrufe Display und Software-Rendering explizit in die VM-Umgebung geben, z. B. `orb -m ros-humble env DISPLAY=:10.0 LIBGL_ALWAYS_SOFTWARE=1 ...`.
-- Bereitschaftsprüfung in der VM: `orb -m ros-humble python3 /Users/toto/Projects/linobot2_ws/src/linorobot2/scripts/check_rdp_ready.py`.
+- Bereitschaftsprüfung in der VM: `orb -m ros-humble python3 /Users/toto/Projects/linobot2_ws/src/linorobot2/scripts/check_rdp_ready.py`. Sie prüft beide Loopback-Listener passiv; ein roher TCP-Connect ohne RDP-Handshake wird absichtlich vermieden, weil xrdp diesen als Protokollfehler protokolliert.
 - Listener ausschließlich an Loopback belassen. Niemals `0.0.0.0`, `xhost +` oder eine Firewallöffnung als Fehlerbehebung einsetzen.
 - **Renderlast:** Die aktive Windows-App-Sitzung handelte am 09.10.2026 trotz Profilwert 1600×900 ein xorgxrdp-Display `1920×1481` aus. llvmpipe rendert auf der CPU; Gazebo-GUI kann dabei mehrere CPU-Kerne belegen. xorgxrdp meldete nur den aktuellen Modus und lehnte eine kleinere RandR-Framebuffergröße ab. Bei zu hoher Last in Windows App eine kleinere/feste Desktopauflösung (z. B. 1280×800) wählen und RDP neu verbinden; keine `xhost`-/Firewall-/RandR-Erzwingung verwenden.
-- **Offene Prüfung 15.10.2026:** Die RDP-Sitzung war nicht verfügbar; deshalb
-  erfolgte kein Reconnect und keine neue Auflösungsmessung. Profil und
-  Konfiguration wurden nicht verändert.
+- **Reconnect bestätigt am 15.10.2026:** Mac-Tunnel auf IPv4- und
+  IPv6-Loopback, Guest-xrdp auf `127.0.0.1:3389` und sesman auf
+  `[::1]:3350`; Login/Reconnect auf die bestehende Sitzung `:10.0` bestanden.
+  `xrandr --current` meldete danach ausschließlich den aktiven Modus 1280×800.
+  Keine RandR-Erzwingung, Dienstneukonfiguration oder Desktop-Neuanlage.
 
 ## Fortress in Gazebo anzeigen
 
@@ -44,9 +46,9 @@ Alternativ direkt in einem **XFCE-Terminal innerhalb des RDP-Desktops** (die VM-
 
 `bash scripts/start_gazebo_rdp.sh`
 
-Der Start öffnet die stehende Fortress-Testwelt samt 2WD-Roboter **und RViz** im vorhandenen RDP-Desktop. RViz zeigt RobotModel, TF und `/scan` aus `fortress.rviz`, mit Simulationszeit. Der Start setzt und prüft `ROS_DOMAIN_ID=42`, verwendet eine eigene Ignition-Partition, startet **kein Nav2** und sendet keine Fahrziele. Für Software-Rendering ist Mesa `LP_NUM_THREADS` standardmäßig auf 2 begrenzt; überschreiben lässt sich das beim Start z. B. mit `LP_NUM_THREADS=4 bash scripts/start_gazebo_rdp.sh`. Weniger Threads senken CPU-Spitzen, können aber die Bildrate reduzieren. **Gemessene SIL-Momentaufnahme 09.10.2026:** mit `LP_NUM_THREADS=2` lag Gazebo-GUI bei ~192 % CPU, Server ~22 %, RViz ~27 %, Load-Average (1 min) 3,30; vorher ohne Limit waren es ~533 % / ~43 % / ~33 % und Load 15,39. RDP-Auflösung blieb dabei 1920×1481; die 1280×800-Profileinstellung wird erst nach erneutem Verbinden wirksam. Dies ist ein beobachteter Lauf, kein Performance-Gate. Den Start im selben Terminal mit `Ctrl+C` beenden; der Supervisor räumt den zugehörigen Prozessbaum begrenzt auf. Vor erneutem Start die vorige Ansicht beenden, damit keine zweite Simulation läuft. Bei doppelten ROS-Knotennamen oder mehreren `/clock`-Publishern nicht weiter navigieren; zuerst alle älteren Simulator-Launches sauber mit `Ctrl+C` beenden und anschließend genau einen Launch starten.
+Der Start öffnet die stehende Fortress-Testwelt samt 2WD-Roboter **und RViz** im vorhandenen RDP-Desktop. RViz zeigt RobotModel, TF und `/scan` aus `fortress.rviz`, mit Simulationszeit. Der Start setzt und prüft `ROS_DOMAIN_ID=42`, verwendet eine eigene Ignition-Partition, startet **kein Nav2** und sendet keine Fahrziele. Für Software-Rendering ist Mesa `LP_NUM_THREADS` standardmäßig auf 2 begrenzt; überschreiben lässt sich das beim Start z. B. mit `LP_NUM_THREADS=4 bash scripts/start_gazebo_rdp.sh`. Weniger Threads senken CPU-Spitzen, können aber die Bildrate reduzieren. **Gemessene SIL-Momentaufnahme 09.10.2026:** mit `LP_NUM_THREADS=2` lag Gazebo-GUI bei ~192 % CPU, Server ~22 %, RViz ~27 %, Load-Average (1 min) 3,30; vorher ohne Limit waren es ~533 % / ~43 % / ~33 % und Load 15,39. Die damalige RDP-Sitzung blieb bei 1920×1481; der Reconnect am 15.10.2026 aktivierte anschließend 1280×800. Dies ist ein beobachteter Lauf, kein Performance-Gate. Den Start im selben Terminal mit `Ctrl+C` beenden; der Supervisor räumt den zugehörigen Prozessbaum begrenzt auf. Vor erneutem Start die vorige Ansicht beenden, damit keine zweite Simulation läuft. Bei doppelten ROS-Knotennamen oder mehreren `/clock`-Publishern nicht weiter navigieren; zuerst alle älteren Simulator-Launches sauber mit `Ctrl+C` beenden und anschließend genau einen Launch starten.
 
-Falls Gazebo/RViz gerade nicht laufen, den oben genannten Startbefehl **manuell in einem XFCE-Terminal innerhalb der RDP-Sitzung** ausführen. Die aktuelle 1280×800 Profilauflösung greift erst nach erneutem Verbinden; `LP_NUM_THREADS=2` wird beim nächsten Launcher-Start aktiv.
+Falls Gazebo/RViz gerade nicht laufen, den oben genannten Startbefehl **manuell in einem XFCE-Terminal innerhalb der RDP-Sitzung** ausführen. `LP_NUM_THREADS=2` wird beim nächsten Launcher-Start aktiv. Die 1280×800-Auflösung ist seit dem Reconnect am 15.10.2026 aktiv.
 
 Am 08.10.2026 wurde der gemeinsame Pfad in der aktiven RDP-Sitzung geprüft: Gazebo (`1516×738`) und RViz (`700×525`) sind beide auf `:10.0` gemappt und ihre Window-Pings bestehen. RViz lädt `fortress.rviz`; der Gazebo-Screenshot-Service lieferte eine valide PNG. Aktuelle Sitzung verwendet `fortress_test`. Der Wrapper schreibt pro Start nach `/home/toto/linobot2_sim/log/rdp-gazebo-*/launch.log` und speichert den aktuellen Pfad in `/home/toto/linobot2_sim/log/rdp-gazebo-current.txt`.
 

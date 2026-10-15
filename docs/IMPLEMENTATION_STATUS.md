@@ -4,6 +4,17 @@ Stand: 15.10.2026. Dieses Dokument hält Nachweise, tatsächliche Laufzeit und b
 
 ## Aktueller Gate- und Phasenstatus
 
+- **RDP-Auflösungsprüfung am 15.10.2026 bestanden:** xrdp und sesman waren
+    aktiv und ausschließlich an Guest-Loopback gebunden
+    (`127.0.0.1:3389`, `[::1]:3350`). Der Mac-Tunnel lauschte ausschließlich
+    auf `127.0.0.1:13389` und `[::1]:13389`. Windows App verband sich mit dem
+    versionierten Profil erfolgreich erneut zur bestehenden Xorg-Sitzung
+    `:10.0`; `xrandr --current` meldete danach den einzigen aktiven Modus
+    1280×800. Keine RandR-Erzwingung, Dienstneukonfiguration oder neue
+    Desktopsitzung. Der Readiness-Check verwendet jetzt nur die sicheren
+    Listenerzustände: rohe TCP-Probes ohne RDP-Handshake hatten zuvor
+    erwartbare xrdp-Protokollfehler erzeugt. 11 gezielte Regressionstests und
+    Shellsyntaxprüfung bestanden; erneuter Check erzeugte keine Warn-/Fehlerlogs.
 - **G9 am 15.10.2026 bestanden:** Aktive Projektdokumente,
     Betriebs-/Testskripte, projektbezogene Copilot-Anweisungen und das
     RDP-Profil wurden in den Fork integriert. Releasewerkzeuge erzeugen
@@ -919,9 +930,10 @@ Stand: 15.10.2026. Dieses Dokument hält Nachweise, tatsächliche Laufzeit und b
     und `odom → base_footprint`; beide Fenster pingbar (13,5/11 ms). Auflösung
     blieb 1920×1481, daher ist die Lastsenkung mit Threadlimit und Single-Run
     zusammen beobachtet, aber kein isolierter Benchmark/Performance-Gate.
-    Das Mac-RDP-Profil `ros-humble-rdp.rdp` ist für den nächsten Connect auf
-    feste 1280×800 mit deaktivierter dynamischer Auflösung gesetzt; die aktive
-    Sitzung verwendet weiterhin 1920×1481. Kein Nav2-Ziel/Nichtnull-Fahrbefehl,
+    Das Mac-RDP-Profil `ros-humble-rdp.rdp` war für den nächsten Connect auf
+    feste 1280×800 mit deaktivierter dynamischer Auflösung gesetzt; die damals
+    aktive Sitzung verwendete weiterhin 1920×1481. Der spätere Reconnect am
+    15.10.2026 bestätigte 1280×800. Kein Nav2-Ziel/Nichtnull-Fahrbefehl,
     keine Hardware; kein G4-/Performance-Gate.
 - **Noise-/Slip-Profil `g4-noise-slip-v1` (08.10.2026, implementiert und in Runs 44/45 runtime-bestanden):**
     `scripts/g4_robustness_profile.json` pinnt `g4-noise-slip-v1` (Seed `20261008`,

@@ -67,6 +67,18 @@ Hardware wheel-odometry yaw requires its own measured calibration in G8.
    in the first turn. Removing the support introduced chassis/ground contact,
    so the result does not isolate wheel constraints.
 3. **Revised contact probe:** retain the caster geometry but set its already
-   low friction from `0.01` to `0.0`. This preserves support while removing
-   tangential caster friction.
+   low friction from `0.01` to `0.0`. Run `g2-motion-20261015-081539` passed
+   all bounded motion and watchdog checks. Raw/GT remained
+   `1.213363…1.215087`, versus baseline `1.213581…1.215269`. Roll/Pitch stayed
+   below `1.9×10⁻⁶ rad`; the base-Z range remained
+   `−0.000861…0.000000 m`, so support geometry remained valid. Caster
+   tangential friction does not explain the yaw deficit.
 4. If needed, instrument contact slip velocities in a DART-level debug build.
+
+## Follow-up conclusion
+
+The bounded discriminators strengthen the Fortress/DART wheel-contact
+constraint hypothesis: halving the physics step and removing caster friction
+did not measurably change the factor, while removing the support geometry was
+physically invalid. No simulator factor is transferred to hardware. Further
+DART-level slip instrumentation is optional research, not an open G3 gate.

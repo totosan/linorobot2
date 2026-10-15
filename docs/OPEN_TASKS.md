@@ -20,8 +20,7 @@ abgeschwächt.
 
 | Rang | Offener Punkt | Priorität | Aufwand | Einordnung |
 | ---: | --- | --- | --- | --- |
-| 1 | G3-Yaw-Bias mit einer geometrisch gültigen Nullreibungs-Casterprobe abschließen | P2 – optionale SIL-Untersuchung | S | Halbierter Physikschritt ohne messbaren Effekt; Caster-Entfernung wegen Kippen und Chassiskontakt inconclusive. Keine Änderung von Hardwareparametern und keine Übertragung des Simulatorfaktors. |
-| 2 | RDP-Auflösung nach dem nächsten regulären Reconnect verifizieren | P3 – Betriebskomfort | XS–S | RDP-Sitzung am 15.10.2026 nicht verfügbar; Punkt bleibt offen. Nur beobachten, keine RandR-/Framebuffer-Änderung und kein Autostart. |
+| 1 | RDP-Auflösung nach dem nächsten regulären Reconnect verifizieren | P3 – Betriebskomfort | XS–S | RDP-Sitzung am 15.10.2026 nicht verfügbar; Punkt bleibt blockiert. Nur beobachten, keine RandR-/Framebuffer-Änderung und kein Autostart. |
 
 ### Danach: externe und hardwareabhängige Transferarbeiten
 
@@ -31,12 +30,12 @@ abgeschwächten Empfehlungen.
 
 | Rang | Offener Punkt | Priorität | Aufwand | Vorbedingung / Einordnung |
 | ---: | --- | --- | --- | --- |
-| 4 | Optional einen einzelnen echten Inferenzlauf auf Jetson `.71` prüfen | P2 – optional, nur bei gewünschtem Hardware-Inferenzvergleich | S–M | Nutzer kann `.71` bei Bedarf starten. Danach Dienst-/Engine-Hash und Labelmapping gegen den archivierten Nachweis verifizieren und genau einen freigegebenen Request mit klarem Bildursprung ausführen. Der frühere externe Einbildlauf lieferte null Detektionen; positive Erkennung und ROS-Contract-v1-Transport sind damit noch nicht belegt. Kein Motor-/Nav2-Test. |
-| 5 | Vollständiges Jetson-/QSPI-Systemabbild sichern | P1 – Werterhalt vor invasiven Jetson-Arbeiten | M | Kein Blocker für lokale SIL-Arbeit; vor invasiven Änderungen erforderlich. |
-| 6 | Jetson-Hardwarevoraussetzungen verifizieren: Firmwaretransport/Baudrate, Middleware/RMW, Geräteanwesenheit und Alias-/Kabelrollen | P1 – vor physischem Betrieb | M–L | Software-Preflight erkennt keinen Kabeltausch identischer UART-Geräte. Kein sensorführender Bringup vor Klärung. |
-| 7 | Pi-SSH-Host-Key unabhängig out-of-band verifizieren | P0 – Sicherheitsblocker bei Pi-Zugriff | XS, sobald ein vertrauenswürdiger Vergleichswert vorliegt; derzeit blockiert | Vor jeder Pi-Verbindung. Bis zur unabhängigen Prüfung keine Verbindung und keine Änderung an `known_hosts`. |
-| 8 | G7: motorloses Pi-/ESP32-HIL vorbereiten und prüfen | P1 – Transfergate | L | Erst nach Host-Key-Verifikation, bestätigter physischer Motortrennung und separater Freigabe. Keine Firmware- oder Motoraktion. |
-| 9 | G8: physische Abnahme von Geometrie/Sensorposen, Not-Aus, Stoppverhalten und Limits | P2 – spätere Hardwareabnahme | L | Erst nach G7, auf sicherem Prüfstand und mit eigener Freigabe. SIL-Werte nicht als Hardwaremesswerte übernehmen. |
+| 2 | Optional einen einzelnen echten Inferenzlauf auf Jetson `.71` prüfen | P2 – optional, nur bei gewünschtem Hardware-Inferenzvergleich | S–M | Nutzer kann `.71` bei Bedarf starten. Danach Dienst-/Engine-Hash und Labelmapping gegen den archivierten Nachweis verifizieren und genau einen freigegebenen Request mit klarem Bildursprung ausführen. Der frühere externe Einbildlauf lieferte null Detektionen; positive Erkennung und ROS-Contract-v1-Transport sind damit noch nicht belegt. Kein Motor-/Nav2-Test. |
+| 3 | Vollständiges Jetson-/QSPI-Systemabbild sichern | P1 – Werterhalt vor invasiven Jetson-Arbeiten | M | Kein Blocker für lokale SIL-Arbeit; vor invasiven Änderungen erforderlich. |
+| 4 | Jetson-Hardwarevoraussetzungen verifizieren: Firmwaretransport/Baudrate, Middleware/RMW, Geräteanwesenheit und Alias-/Kabelrollen | P1 – vor physischem Betrieb | M–L | Software-Preflight erkennt keinen Kabeltausch identischer UART-Geräte. Kein sensorführender Bringup vor Klärung. |
+| 5 | Pi-SSH-Host-Key unabhängig out-of-band verifizieren | P0 – Sicherheitsblocker bei Pi-Zugriff | XS, sobald ein vertrauenswürdiger Vergleichswert vorliegt; derzeit blockiert | Vor jeder Pi-Verbindung. Bis zur unabhängigen Prüfung keine Verbindung und keine Änderung an `known_hosts`. |
+| 6 | G7: motorloses Pi-/ESP32-HIL vorbereiten und prüfen | P1 – Transfergate | L | Erst nach Host-Key-Verifikation, bestätigter physischer Motortrennung und separater Freigabe. Keine Firmware- oder Motoraktion. |
+| 7 | G8: physische Abnahme von Geometrie/Sensorposen, Not-Aus, Stoppverhalten und Limits | P2 – spätere Hardwareabnahme | L | Erst nach G7, auf sicherem Prüfstand und mit eigener Freigabe. SIL-Werte nicht als Hardwaremesswerte übernehmen. |
 
 Der Host-Key bleibt ein absoluter Sicherheitsblocker für Pi-Zugriff, auch wenn
 seine Prüfung in der Arbeitsreihenfolge erst unmittelbar vor dem Hardwarepfad
@@ -55,6 +54,12 @@ den einzelnen Test ausdrücklich freigegeben hat.
   bestanden; danach wurde die vorherige Legacy-Auswahl ohne `active`-Symlink
   wiederhergestellt. Der EOL-Review vor Mai 2027 bleibt ein eigener späterer
   Lifecyclepunkt.
+- **G3-Yaw-Bias-Diskriminatoren abgeschlossen am 15.10.2026:** Halbierter
+  Physikschritt und Caster-μ `0` änderten raw/GT nicht messbar. Caster-Entfernung
+  war wegen Kippen/Chassiskontakt inconclusive und wurde nicht als Beleg
+  verwendet. Die Radkontaktconstraint-These bleibt wahrscheinlich;
+  DART-Debuginstrumentierung ist optionale Forschung. Keine Übertragung auf
+  Hardwareparameter.
 - **G4-/G5-Nav2-Input-Replay – abgeschlossen am 15.10.2026:** G5-Off,
   G5-Mock und beide Segmente des erfolgreichen G4-Run 42 bestanden den
   isolierten Domain-43-Gate. Der G4-Quellbag enthält einen echten

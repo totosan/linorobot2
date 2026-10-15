@@ -48,8 +48,15 @@ Stand: 15.10.2026. Dieses Dokument hält Nachweise, tatsächliche Laufzeit und b
     Ground-Truth-Yaw `0` ab. Bereits in den bestandenen Geradeaussegmenten lag
     die Basis bei `z≈−0,0125 m` und Pitch `0,176…0,189 rad`; Chassis-/Bodenkontakt
     ersetzt die entfernte Stütze. Das Ergebnis ist `inconclusive`, kein Beleg
-    gegen den Caster. Eine geometrisch gültige Folgeprobe behält den Caster
-    bei und setzt nur dessen Kontaktreibung testweise von `0,01` auf `0`.
+    gegen den Caster. Die geometrisch gültige Nullreibungsprobe
+    `g2-motion-20261015-081539` behielt die Stützgeometrie bei und setzte nur
+    Caster-μ von `0,01` auf `0`. Alle Bewegungs-/Watchdogchecks bestanden;
+    raw/GT blieb `1,213363…1,215087` gegenüber Baseline
+    `1,213581…1,215269`. Roll/Pitch blieben unter `1,9×10⁻⁶ rad`, Z lag
+    `−0,000861…0,000000 m`. Damit erklären weder Schrittweite noch
+    Casterreibung den Faktor; die Fortress/DART-Radkontaktconstraint-These ist
+    weiter gestützt. Weitere DART-Slipinstrumentierung ist optional, kein
+    offenes G3-Gate und keine Hardwarekalibrierung.
 - **G4 am 08.10.2026 vollständig im SIL bestanden.** Runs 42/43 decken alle vier
     sensor-derived Basisszenarien ab; Runs 44/45 bestehen dieselbe Matrix unter
     dem eingefrorenen `g4-noise-slip-v1`-Profil. Run 25 bleibt separat als

@@ -30,6 +30,9 @@ Der Autostart gilt nur für interaktive Bash-Shells; Skripte und Prozesse mit ei
 - Bereitschaftsprüfung in der VM: `orb -m ros-humble python3 /Users/toto/Projects/linobot2_ws/src/linorobot2/scripts/check_rdp_ready.py`.
 - Listener ausschließlich an Loopback belassen. Niemals `0.0.0.0`, `xhost +` oder eine Firewallöffnung als Fehlerbehebung einsetzen.
 - **Renderlast:** Die aktive Windows-App-Sitzung handelte am 09.10.2026 trotz Profilwert 1600×900 ein xorgxrdp-Display `1920×1481` aus. llvmpipe rendert auf der CPU; Gazebo-GUI kann dabei mehrere CPU-Kerne belegen. xorgxrdp meldete nur den aktuellen Modus und lehnte eine kleinere RandR-Framebuffergröße ab. Bei zu hoher Last in Windows App eine kleinere/feste Desktopauflösung (z. B. 1280×800) wählen und RDP neu verbinden; keine `xhost`-/Firewall-/RandR-Erzwingung verwenden.
+- **Offene Prüfung 15.10.2026:** Die RDP-Sitzung war nicht verfügbar; deshalb
+  erfolgte kein Reconnect und keine neue Auflösungsmessung. Profil und
+  Konfiguration wurden nicht verändert.
 
 ## Fortress in Gazebo anzeigen
 

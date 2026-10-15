@@ -684,12 +684,11 @@ G4 noch G5 sind Hardware- oder Inferenzabnahmen. Die ältere Review-Chronik und
 die folgenden Phase-5-Arbeitsstände dokumentieren Zwischenstände vor diesen
 Abnahmen.
 
-**Nächster Einstieg (15.10.2026):** Der G4/G5-Nav2-Input-Replay ist mit
-G5-Off, G5-Mock und beiden Clock-Epochen des erfolgreichen G4-Run 42
-abgeschlossen. Als nächste hardwareunabhängige Folgearbeit steht der
-G9-Frischaufbau-/Start-/Stop-/Rollback-Nachweis an; optionale
-G3-Yaw-Bias-Diskriminatoren und RDP-Prüfung folgen nach Aufwand. Die
-priorisierte Liste samt Schätzungen steht
+**Nächster Einstieg (15.10.2026):** Der G4/G5-Nav2-Input-Replay, G9-
+Frischaufbau/Start/Stop/Rollback und die optionalen G3-Yaw-Bias-
+Diskriminatoren sind abgeschlossen. Hardwareunabhängig offen bleibt nur die
+RDP-Auflösungsbeobachtung nach einem regulären Reconnect; die Sitzung war am
+15.10.2026 nicht verfügbar. Die priorisierte Liste steht
 in [`OPEN_TASKS.md`](OPEN_TASKS.md). Ein echter `.71`-Livevergleich ist optional;
 Pi-/Jetson-/HIL-Arbeiten bleiben nachgelagerte Transferpfade mit ihren
 Sicherheits- und Freigabevoraussetzungen. Der lokale `yolo12n`-CPU-Nachweis ist

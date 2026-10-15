@@ -17,11 +17,11 @@ Die alte ausführliche Übergabe bleibt als [`archive/HANDOFF_2026-10-07.md`](ar
 
 - **G1–G5 und lokaler G6:** im SIL bestanden. Runs 42/43 belegen alle vier G4-Szenarien nominal; Runs 44/45 bestehen dieselbe sensor-derived Szenarienmatrix mit `g4-noise-slip-v1` (festem Seed und rosbag). Der G5-Off/Mock-Nav2-Vergleich ist ebenfalls bestanden. G4/G5/G6 lokal sind **SIL-abgenommen**, nicht hardwarevalidiert. G6-Contract-v1-Probe mit genau einem Domain-42-Fotocapture: `log/person_runtime/g6_oneshot_20261013_1759/vision-probe.json`; dabei lief der Mac-gehostete CPU-Detector als `.71`-Protokollzwilling, nicht der echte Jetson. Das ist vom fixturebasierten ROS-`mock`-Backend zu unterscheiden. Ein echter `.71`-TensorRT-Vergleich ist optional: Nutzer kann den Dienst bei Bedarf starten, ein einzelner Inferenzrequest braucht separate Freigabe. `.150` ist für diesen Zweck nicht der richtige Endpunkt.
 - **Nächste Arbeit:** G9 ist mit zwei Remote-Frischreleases, Headless-Smokes und
-  atomarem Rollback bestanden. Für G3 blieb der halbierte Physikschritt ohne
-  Effekt; Caster-Entfernung war wegen Kippen/Chassiskontakt inconclusive. Offen
-  ist genau eine geometrisch gültige Nullreibungs-Casterprobe. Die RDP-Auflösung
-  wartet weiter auf einen regulären Reconnect; am 15.10.2026 war die Sitzung
-  nicht verfügbar. Pi-/Jetson-/HIL-Arbeit bleibt nachgelagert.
+  atomarem Rollback bestanden. Die G3-Diskriminatoren sind abgeschlossen:
+  halbierter Physikschritt und Caster-Nullreibung änderten den Faktor nicht
+  messbar; Caster-Entfernung war physikalisch ungültig. Offen bleibt die
+  RDP-Auflösung nach regulärem Reconnect; am 15.10.2026 war die Sitzung nicht
+  verfügbar. Pi-/Jetson-/HIL-Arbeit bleibt nachgelagert.
 - **TF2:** gepinnter Humble-Fix manuell per A/B geprüft. Original reproduziert den Deadlock, Overlay besteht 11/11 upstream Buffer-Tests. `/opt/ros` wurde nicht überschrieben.
 - **Run 25:** PASS für freie Fahrt und Hindernisumfahrung mit TF2-Fix. Log: `/home/toto/linobot2_sim/log/g4-nav-20261007-134435-LJ0KXV/`. Die Navigation nutzt eine Ground-Truth-assistierte Map-Fixture; kein sensor-only SLAM-/Hardwaretransferbeweis.
 - **Run 29:** Mapping und sensor-derived Map-Preparation bestanden (3.144 neue known, 3.768 known, 171 occupied, Mindest-Clearance `0,302 m`). Nav2-Readiness scheiterte wegen doppeltem Fortress-Start im Map-Reuse; TF-Zeitsprünge, sechs inaktive Lifecycle-Nodes, keine Goals.

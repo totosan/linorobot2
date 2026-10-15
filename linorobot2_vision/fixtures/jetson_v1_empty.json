@@ -1,0 +1,10 @@
+{
+  "success": true,
+  "message": "No objects detected",
+  "predictions": [],
+  "processMs": 12,
+  "inferenceMs": 4,
+  "moduleId": "ObjectDetectionYOLOv11",
+  "processedBy": "fixture-host",
+  "timestampUTC": "2025-08-04T12:34:56.000000Z"
+}

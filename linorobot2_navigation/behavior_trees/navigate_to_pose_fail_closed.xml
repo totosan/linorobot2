@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!--
+  Goal-specific G4 policy for a target already proven unknown/occupied in the map.
+  Planner failure returns failure directly: no costmap clearing, spin, backup,
+  wait, or other motion recovery. The normal Nav2 tree remains unchanged.
+-->
+<root main_tree_to_execute="MainTree">
+  <BehaviorTree ID="MainTree">
+    <PipelineSequence name="FailClosedNavigate">
+      <RateController hz="1.0">
+        <ComputePathToPose goal="{goal}" path="{path}" planner_id="GridBased"/>
+      </RateController>
+      <FollowPath path="{path}" controller_id="FollowPath"/>
+    </PipelineSequence>
+  </BehaviorTree>
+</root>

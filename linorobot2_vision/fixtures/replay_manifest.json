@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "cases": {
+    "detection": {
+      "display_name": "Synthetic person-like object",
+      "image": "synthetic_scene.svg",
+      "response": "detection.json"
+    },
+    "empty": {
+      "display_name": "Valid empty result",
+      "image": "synthetic_scene.svg",
+      "response": "empty.json"
+    },
+    "unavailable": {
+      "display_name": "Backend unavailable",
+      "image": null,
+      "response": "unavailable.json"
+    }
+  }
+}

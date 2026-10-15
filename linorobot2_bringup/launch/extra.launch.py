@@ -16,7 +16,7 @@ from launch import LaunchDescription
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node, SetRemap
-from launch.actions import IncludeLaunchDescription, GroupAction
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, GroupAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 
 
@@ -31,13 +31,18 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            name='lidar_serial_port',
+            default_value='/dev/ttyUSB1',
+            description='Serial port for the configured lidar'
+        ),
         Node(
             package='ldlidar',
             executable='ldlidar',
             name='ldlidar',
             output='screen',
             parameters=[
-                {'serial_port': '/dev/ttyUSB1'},
+                {'serial_port': LaunchConfiguration('lidar_serial_port')},
                 {'topic_name': '/base/scan/unfiltered'},
                 {'lidar_frame': 'base_laser'},
                 {'range_threshold': 0.005}

@@ -1,5 +1,12 @@
-log
-build
-install
+log/
+build/
+install/
+*.py[cod]
+__pycache__/
+.pytest_cache/
+.DS_Store
+.vscode/
+*.swp
 yolov3.weights
 yolov3.cfg
+.env.jetson

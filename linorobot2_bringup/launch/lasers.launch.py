@@ -23,6 +23,9 @@ from launch_ros.actions import Node
 
 def launch_rplidar(context, *args, **kwargs):
     lidar_str = context.perform_substitution(LaunchConfiguration('sensor'))
+    lidar_serial_port = context.perform_substitution(
+        LaunchConfiguration('lidar_serial_port')
+    )
     rplidar_sensors = [
         'a1',
         'a2',
@@ -40,7 +43,7 @@ def launch_rplidar(context, *args, **kwargs):
                 [FindPackageShare('sllidar_ros2'), 'launch', launch_file]
             )),
             launch_arguments={
-                'serial_port': '/dev/ttyUSB1', 
+                'serial_port': lidar_serial_port,
                 'frame_id': LaunchConfiguration('frame_id'),
             }.items()   
         )]
@@ -118,7 +121,7 @@ def generate_launch_description():
             emulate_tty=True,
             remappings=[('scan', LaunchConfiguration('topic_name'))],
             parameters=[{ 
-                'port': '/dev/ydlidar',
+                'port': LaunchConfiguration('lidar_serial_port'),
                 'frame_id': LaunchConfiguration('frame_id'),
                 'ignore_array': '',
                 'baudrate': 128000,
@@ -150,7 +153,7 @@ def generate_launch_description():
             output='screen',
             remappings=[('scan', LaunchConfiguration('topic_name'))],
             parameters=[{
-                'serial_port': '/dev/ttyUSB1',
+                'serial_port': LaunchConfiguration('lidar_serial_port'),
                 'serial_baudrate': 115200,  # A1 / A2
                 'frame_id': LaunchConfiguration('frame_id'),
                 'inverted': False,
@@ -180,7 +183,7 @@ def generate_launch_description():
             name='ldlidar',
             output='screen',
             parameters=[
-                {'serial_port': '/dev/ttyUSB1'},
+                {'serial_port': LaunchConfiguration('lidar_serial_port')},
                 {'topic_name': LaunchConfiguration('topic_name')},
                 {'lidar_frame': LaunchConfiguration('frame_id')},
                 {'range_threshold': 0.005}

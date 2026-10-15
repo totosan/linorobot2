@@ -1,0 +1,119 @@
+<?xml version="1.0"?>
+<robot name="linorobot2_2wd" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:arg name="lidar_noise_stddev" default="0.0"/>
+  <xacro:arg name="imu_gyro_noise_stddev" default="0.0"/>
+  <xacro:arg name="imu_accel_noise_stddev" default="0.0"/>
+  <xacro:arg name="wheel_mu" default="1.0"/>
+  <xacro:arg name="include_caster" default="true"/>
+
+  <!-- Geometrieparameter (Pi-Stand / Phase 0 Manifest) -->
+  <xacro:property name="base_length" value="0.22" />
+  <xacro:property name="base_width" value="0.18" />
+  <xacro:property name="base_height" value="0.06" />
+  <xacro:property name="base_mass" value="1.0" />
+
+  <!-- myrobot-Firmwarekandidaten, noch nicht physisch verifiziert. -->
+  <xacro:property name="wheel_radius" value="0.03375" />
+  <xacro:property name="wheel_width" value="0.027" />
+  <xacro:property name="wheel_pos_x" value="-0.07" />
+  <xacro:property name="wheel_pos_y" value="0.063" />
+  <xacro:property name="wheel_pos_z" value="-0.03" />
+  <xacro:property name="wheel_mass" value="0.1" />
+
+  <!-- Mechanik-Includes -->
+  <xacro:include filename="$(find linorobot2_description)/urdf/mech/base.urdf.xacro" />
+  <xacro:include filename="$(find linorobot2_description)/urdf/mech/wheel.urdf.xacro" />
+  <xacro:include filename="$(find linorobot2_description)/urdf/mech/caster_wheel.urdf.xacro" />
+
+  <!-- Fortress-Plugins -->
+  <xacro:include filename="$(find linorobot2_description)/urdf/sensors/fortress_laser.urdf.xacro" />
+  <xacro:include filename="$(find linorobot2_description)/urdf/sensors/fortress_imu.urdf.xacro" />
+  <xacro:include filename="$(find linorobot2_description)/urdf/sensors/fortress_camera.urdf.xacro" />
+  <xacro:include filename="$(find linorobot2_description)/urdf/controllers/fortress_diff_drive.urdf.xacro" />
+
+  <!-- Roboterbasis -->
+  <xacro:base
+    length="${base_length}"
+    width="${base_width}"
+    height="${base_height}"
+    mass="${base_mass}"
+    wheel_radius="${wheel_radius}"
+    wheel_pos_z="${wheel_pos_z}"
+  />
+
+  <!-- Fortress DiffDrive odometry is referenced at the wheel axle. The wheel
+       axle is offset from the chassis-centered base_footprint in this model. -->
+  <link name="base_drive"/>
+  <joint name="base_footprint_to_drive" type="fixed">
+    <parent link="base_footprint"/>
+    <child link="base_drive"/>
+    <origin xyz="${wheel_pos_x} 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <!-- Räder -->
+  <xacro:wheel
+    side="left"
+    radius="${wheel_radius}"
+    width="${wheel_width}"
+    pos_x="${wheel_pos_x}"
+    pos_y="${wheel_pos_y}"
+    pos_z="${wheel_pos_z}"
+    mass="${wheel_mass}"
+  />
+
+  <xacro:wheel
+    side="right"
+    radius="${wheel_radius}"
+    width="${wheel_width}"
+    pos_x="${wheel_pos_x}"
+    pos_y="${-wheel_pos_y}"
+    pos_z="${wheel_pos_z}"
+    mass="${wheel_mass}"
+  />
+
+  <gazebo reference="left_wheel_link">
+    <mu1>$(arg wheel_mu)</mu1>
+    <mu2>$(arg wheel_mu)</mu2>
+  </gazebo>
+  <gazebo reference="right_wheel_link">
+    <mu1>$(arg wheel_mu)</mu1>
+    <mu2>$(arg wheel_mu)</mu2>
+  </gazebo>
+
+  <xacro:if value="$(arg include_caster)">
+    <xacro:caster_wheel
+      side="front"
+      mass="0.01"
+      base_length="${base_length}"
+      wheel_radius="${wheel_radius}"
+      wheel_pos_z="${wheel_pos_z}"
+    />
+  </xacro:if>
+
+  <!-- Sensoren -->
+  <xacro:fortress_imu frame_id="imu_link" topic_name="/imu/data"
+    gyro_noise_stddev="$(arg imu_gyro_noise_stddev)"
+    accel_noise_stddev="$(arg imu_accel_noise_stddev)" />
+  <xacro:fortress_camera frame_id="camera_link" image_topic="/camera/image_raw" info_topic="/camera/camera_info" />
+
+  <xacro:fortress_laser
+    update_rate="10"
+    ray_count="360"
+    min_angle="-3.14159"
+    max_angle="3.14159"
+    min_range="0.08"
+    max_range="12.0"
+    noise_stddev="$(arg lidar_noise_stddev)"
+    frame_id="laser"
+    topic_name="/scan">
+    <origin xyz="0.02 0 0.085" rpy="0 0 0"/>
+  </xacro:fortress_laser>
+
+  <!-- Diff-Drive Controller & Joint State Publisher -->
+  <xacro:fortress_diff_drive
+    wheel_separation="${wheel_pos_y * 2}"
+    wheel_radius="${wheel_radius}"
+  />
+
+</robot>

@@ -37,8 +37,14 @@ def generate_launch_description():
     return LaunchDescription([
         DeclareLaunchArgument(
             name='base_serial_port', 
-            default_value='/dev/ttyUSB1',
+            default_value='/dev/ttyUSB0',
             description='Linorobot Base Serial Port'
+        ),
+
+        DeclareLaunchArgument(
+            name='lidar_serial_port',
+            default_value='/dev/ttyUSB1',
+            description='Serial port for the configured lidar'
         ),
 
         DeclareLaunchArgument(
@@ -91,7 +97,10 @@ def generate_launch_description():
 
         IncludeLaunchDescription(
             PythonLaunchDescriptionSource(sensors_launch_path),
-            launch_arguments={'webcam_enabled': LaunchConfiguration('webcam_enabled')}.items()
+            launch_arguments={
+                'webcam_enabled': LaunchConfiguration('webcam_enabled'),
+                'lidar_serial_port': LaunchConfiguration('lidar_serial_port')
+            }.items()
         ),
 
         IncludeLaunchDescription(

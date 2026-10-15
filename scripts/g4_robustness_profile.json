@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "profile_id": "g4-noise-slip-v1",
+  "seed": 20261008,
+  "rationale": {
+    "lidar": "0.01 m is the lower end of the proposed 1-2 cm SIL stress range and equals one fifth of the 0.05 m map cell.",
+    "imu": "0.01 rad/s gyro and 0.1 m/s^2 acceleration are fixed zero-mean SIL perturbations, not claims about a physical IMU.",
+    "slip": "mu=0.8 is a fixed 20% reduction from the explicit nominal/default mu=1.0, used only as a controlled traction stress case.",
+    "scope": "Simulation-only sensitivity profile. Existing G4 goal, clearance, speed, and stop limits are unchanged."
+  },
+  "lidar_range_stddev_m": 0.01,
+  "imu_angular_velocity_stddev_rad_s": 0.01,
+  "imu_linear_acceleration_stddev_m_s2": 0.1,
+  "wheel_mu1": 0.8,
+  "wheel_mu2": 0.8
+}

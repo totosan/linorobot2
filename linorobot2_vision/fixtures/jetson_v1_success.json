@@ -1,0 +1,19 @@
+{
+  "success": true,
+  "message": "Found person",
+  "predictions": [
+    {
+      "label": "person",
+      "confidence": 0.85,
+      "x_min": 100,
+      "y_min": 150,
+      "x_max": 300,
+      "y_max": 450
+    }
+  ],
+  "processMs": 234,
+  "inferenceMs": 156,
+  "moduleId": "ObjectDetectionYOLOv11",
+  "processedBy": "fixture-host",
+  "timestampUTC": "2025-08-04T12:34:56.000000Z"
+}

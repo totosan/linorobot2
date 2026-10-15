@@ -1,0 +1,28 @@
+{
+  "schema_version": "1.0",
+  "status": "ok",
+  "result": {
+    "capture": {
+      "stamp_ns": 1250000000,
+      "clock_domain": "ros_sim",
+      "frame_id": "camera_optical_frame",
+      "width": 640,
+      "height": 480
+    },
+    "model": {
+      "name": "fixture-detector",
+      "version": "0.1.0",
+      "labels_version": "fixture-labels-v1"
+    },
+    "detections": [
+      {
+        "class_id": 1,
+        "label": "test_object",
+        "confidence": 0.93,
+        "bbox_xyxy_px": [100.0, 80.0, 240.0, 300.0],
+        "track_id": "fixture-track-1"
+      }
+    ]
+  },
+  "error": null
+}

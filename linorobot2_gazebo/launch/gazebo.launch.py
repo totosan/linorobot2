@@ -14,13 +14,31 @@
 
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, ExecuteProcess, IncludeLaunchDescription
+from launch.actions import (DeclareLaunchArgument, ExecuteProcess,
+                            IncludeLaunchDescription, OpaqueFunction,
+                            SetEnvironmentVariable)
 from launch.substitutions import LaunchConfiguration, Command, PathJoinSubstitution
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import ComposableNodeContainer
 from launch_ros.descriptions import ComposableNode
+from linorobot2_base.domain_profile import resolve_ros_domain
+
+
+def configure_ros_domain(context):
+    profile = LaunchConfiguration('ros_profile').perform(context)
+    requested_domain = LaunchConfiguration('ros_domain_id').perform(context)
+    try:
+        domain_id = resolve_ros_domain(
+            profile,
+            requested_domain,
+            os.environ.get('ROS_DOMAIN_ID'),
+            expected_profile='sim',
+        )
+    except ValueError as exc:
+        raise RuntimeError(str(exc)) from exc
+    return [SetEnvironmentVariable(name='ROS_DOMAIN_ID', value=domain_id)]
 
 
 def generate_launch_description():
@@ -44,6 +62,20 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
+        DeclareLaunchArgument(
+            name='ros_profile',
+            default_value='sim',
+            description='Runtime profile; this simulator launch accepts sim only'
+        ),
+
+        DeclareLaunchArgument(
+            name='ros_domain_id',
+            default_value='42',
+            description='ROS domain required by the sim profile'
+        ),
+
+        OpaqueFunction(function=configure_ros_domain),
+
         DeclareLaunchArgument(
             name='urdf', 
             default_value=urdf_path,
@@ -107,9 +139,10 @@ def generate_launch_description():
         ),
 
         Node(
-            package='linorobot2_gazebo',
+            package='linorobot2_base',
             executable='command_timeout.py',
-            name='command_timeout'
+            name='command_timeout',
+            parameters=[{'use_sim_time': False}]
         ),
 
         Node(

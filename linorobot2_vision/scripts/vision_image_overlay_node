@@ -1,0 +1,7 @@
+#!/usr/bin/env python3
+
+from linorobot2_vision.overlay_node import main
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 3.16)
+project(linobot2_tf2_regression)
+find_package(ament_cmake REQUIRED)
+find_package(ament_cmake_gtest REQUIRED)
+find_package(tf2_ros REQUIRED)
+if(NOT EXISTS "${GEOMETRY2_SOURCE}/tf2_ros/test/test_buffer.cpp")
+  message(FATAL_ERROR "GEOMETRY2_SOURCE must name the pinned Humble source tree")
+endif()
+ament_add_gtest(tf2_buffer_regression
+  "${GEOMETRY2_SOURCE}/tf2_ros/test/test_buffer.cpp" TIMEOUT 30)
+ament_target_dependencies(tf2_buffer_regression tf2_ros)

@@ -1,0 +1,134 @@
+<?xml version="1.0" ?>
+<sdf version="1.8">
+  <world name="fortress_test">
+    <physics name="1ms" type="ignored">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <!-- Must load before sensor systems: seeds their shared Gaussian RNG. -->
+    <plugin filename="libg4_random_seed_system.so"
+      name="linorobot2_gazebo::G4RandomSeed">
+      <seed>20261008</seed>
+    </plugin>
+
+    <plugin filename="ignition-gazebo-physics-system"
+      name="ignition::gazebo::systems::Physics" />
+    <plugin filename="ignition-gazebo-user-commands-system"
+      name="ignition::gazebo::systems::UserCommands" />
+    <plugin filename="ignition-gazebo-scene-broadcaster-system"
+      name="ignition::gazebo::systems::SceneBroadcaster" />
+    <plugin filename="ignition-gazebo-sensors-system"
+      name="ignition::gazebo::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="ignition-gazebo-imu-system"
+      name="ignition::gazebo::systems::Imu" />
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.2 0.2 0.2 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="ground_plane">
+      <static>true</static>
+      <link name="link">
+        <collision name="collision">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><plane><normal>0 0 1</normal><size>100 100</size></plane></geometry>
+          <material>
+            <ambient>0.8 0.8 0.8 1</ambient>
+            <diffuse>0.8 0.8 0.8 1</diffuse>
+            <specular>0.8 0.8 0.8 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Sensor-visible west boundary: bounds the SLAM map without GT carving. -->
+    <model name="g4_west_map_anchor">
+      <static>true</static>
+      <pose>-2.0 0 0.5 0 0 0</pose>
+      <link name="anchor_link">
+        <collision name="anchor_collision">
+          <geometry><box><size>0.10 4.0 1.0</size></box></geometry>
+        </collision>
+        <visual name="anchor_visual">
+          <geometry><box><size>0.10 4.0 1.0</size></box></geometry>
+          <material>
+            <ambient>0.2 0.4 0.8 1</ambient>
+            <diffuse>0.2 0.4 0.8 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!--
+      Sensor-mapped passage gate. The opening is 1.00 m wide from y=-1.60 to
+      y=-0.60 (radius 0.22 + clearance 0.15 + lateral budget 0.13 per side);
+      the walls extend beyond the 12 m lidar horizon so a Nav2 path cannot use
+      a visible free-space bypass around their ends.
+    -->
+    <model name="g4_passage_north_wall">
+      <static>true</static>
+      <pose>4.0 9.70 0.5 0 0 0</pose>
+      <link name="wall_link">
+        <collision name="wall_collision">
+          <geometry><box><size>0.10 20.60 1.0</size></box></geometry>
+        </collision>
+        <visual name="wall_visual">
+          <geometry><box><size>0.10 20.60 1.0</size></box></geometry>
+          <material>
+            <ambient>0.2 0.7 0.3 1</ambient>
+            <diffuse>0.2 0.7 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="g4_passage_south_wall">
+      <static>true</static>
+      <pose>4.0 -10.80 0.5 0 0 0</pose>
+      <link name="wall_link">
+        <collision name="wall_collision">
+          <geometry><box><size>0.10 18.40 1.0</size></box></geometry>
+        </collision>
+        <visual name="wall_visual">
+          <geometry><box><size>0.10 18.40 1.0</size></box></geometry>
+          <material>
+            <ambient>0.2 0.7 0.3 1</ambient>
+            <diffuse>0.2 0.7 0.3 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="test_obstacle">
+      <static>true</static>
+      <pose>2.0 0 0.5 0 0 0</pose>
+      <link name="box_link">
+        <collision name="box_collision">
+          <geometry><box><size>1.0 1.0 1.0</size></box></geometry>
+        </collision>
+        <visual name="box_visual">
+          <geometry><box><size>1.0 1.0 1.0</size></box></geometry>
+          <material>
+            <ambient>0.8 0.2 0.2 1</ambient>
+            <diffuse>0.8 0.2 0.2 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+  </world>
+</sdf>

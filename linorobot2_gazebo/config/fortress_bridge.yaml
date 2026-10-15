@@ -1,0 +1,48 @@
+# fortress_bridge.yaml - Bridge-Konfiguration zwischen Ignition Fortress und ROS 2 Humble
+- ros_topic_name: "/clock"
+  ign_topic_name: "/clock"
+  ros_type_name: "rosgraph_msgs/msg/Clock"
+  ign_type_name: "ignition.msgs.Clock"
+  direction: IGN_TO_ROS
+
+- ros_topic_name: "/scan"
+  ign_topic_name: "/scan"
+  ros_type_name: "sensor_msgs/msg/LaserScan"
+  ign_type_name: "ignition.msgs.LaserScan"
+  direction: IGN_TO_ROS
+
+- ros_topic_name: "/imu/data"
+  ign_topic_name: "/imu/data"
+  ros_type_name: "sensor_msgs/msg/Imu"
+  ign_type_name: "ignition.msgs.IMU"
+  direction: IGN_TO_ROS
+
+- ros_topic_name: "/camera/image_raw"
+  ign_topic_name: "/camera/image_raw"
+  ros_type_name: "sensor_msgs/msg/Image"
+  ign_type_name: "ignition.msgs.Image"
+  direction: IGN_TO_ROS
+
+- ros_topic_name: "/camera/camera_info"
+  ign_topic_name: "/camera/camera_info"
+  ros_type_name: "sensor_msgs/msg/CameraInfo"
+  ign_type_name: "ignition.msgs.CameraInfo"
+  direction: IGN_TO_ROS
+
+- ros_topic_name: "/cmd_vel"
+  ign_topic_name: "/cmd_vel"
+  ros_type_name: "geometry_msgs/msg/Twist"
+  ign_type_name: "ignition.msgs.Twist"
+  direction: ROS_TO_IGN
+
+- ros_topic_name: "/odom/unfiltered"
+  ign_topic_name: "/odom/unfiltered"
+  ros_type_name: "nav_msgs/msg/Odometry"
+  ign_type_name: "ignition.msgs.Odometry"
+  direction: IGN_TO_ROS
+
+- ros_topic_name: "/joint_states"
+  ign_topic_name: "/joint_states"
+  ros_type_name: "sensor_msgs/msg/JointState"
+  ign_type_name: "ignition.msgs.Model"
+  direction: IGN_TO_ROS

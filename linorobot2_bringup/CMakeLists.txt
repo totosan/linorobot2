@@ -13,4 +13,9 @@ install(
   DESTINATION lib/${PROJECT_NAME}
 )
 
+install(
+  FILES scripts/lidar_monitor_contract.py
+  DESTINATION lib/${PROJECT_NAME}
+)
+
 ament_package()

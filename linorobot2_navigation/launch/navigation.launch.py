@@ -12,25 +12,84 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from collections.abc import Mapping
 import os
+import tempfile
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
+from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription, OpaqueFunction
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch.conditions import IfCondition
+from ament_index_python.packages import get_package_share_directory
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
-from launch.conditions import IfCondition, UnlessCondition
+from launch.conditions import IfCondition
 
 
 MAP_NAME='buro1' #change to the name of your own map here
 
-def generate_launch_description():
-    depth_sensor = os.getenv('LINOROBOT2_DEPTH_SENSOR', '')
+
+def _merge_parameter_trees(common, profile):
+    """Merge parameter mappings with profile values taking precedence."""
+    if not isinstance(common, Mapping) or not isinstance(profile, Mapping):
+        raise TypeError("Nav2 parameter roots must be mappings")
+
+    merged = dict(common)
+    for key, profile_value in profile.items():
+        common_value = merged.get(key)
+        if isinstance(common_value, Mapping) and isinstance(profile_value, Mapping):
+            merged[key] = _merge_parameter_trees(common_value, profile_value)
+        else:
+            merged[key] = profile_value
+    return merged
+
+
+def _compose_parameter_file(common_path, profile_path, output_path=None):
+    """Compose one standard ROS parameter file without loading sibling modules."""
+    import yaml
+
+    with open(common_path, encoding="utf-8") as stream:
+        common = yaml.safe_load(stream)
+    with open(profile_path, encoding="utf-8") as stream:
+        profile = yaml.safe_load(stream)
+
+    merged = _merge_parameter_trees(common, profile)
+    if output_path is None:
+        descriptor, output_path = tempfile.mkstemp(
+            prefix="linorobot2-nav2-", suffix=".yaml")
+        stream = os.fdopen(descriptor, "w", encoding="utf-8")
+    else:
+        stream = open(output_path, "w", encoding="utf-8")
+    with stream:
+        yaml.safe_dump(merged, stream, sort_keys=False)
+    return os.fspath(output_path)
+
+
+def _launch_nav2(context):
+    sim = LaunchConfiguration("sim").perform(context).lower() == "true"
+    package_share = FindPackageShare('linorobot2_navigation')
+    profile_path = (
+        LaunchConfiguration('sim_params_file').perform(context)
+        if sim else PathJoinSubstitution(
+            [package_share, 'config', 'navigation.yaml']).perform(context)
+    )
+    common_path = LaunchConfiguration('common_params_file').perform(context)
+    params_path = _compose_parameter_file(common_path, profile_path)
 
     nav2_launch_path = PathJoinSubstitution(
         [FindPackageShare('nav2_bringup'), 'launch', 'bringup_launch.py']
     )
+    return [IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(nav2_launch_path),
+        launch_arguments={
+            'map': LaunchConfiguration("map"),
+            'use_sim_time': LaunchConfiguration("sim"),
+            'params_file': params_path
+        }.items()
+    )]
+
+
+def generate_launch_description():
+    depth_sensor = os.getenv('LINOROBOT2_DEPTH_SENSOR', '')
 
     rviz_config_path = PathJoinSubstitution(
         [FindPackageShare('linorobot2_navigation'), 'rviz', 'linorobot2_navigation.rviz']
@@ -40,13 +99,12 @@ def generate_launch_description():
         [FindPackageShare('linorobot2_navigation'), 'maps', f'{MAP_NAME}.yaml']
     )
 
-    nav2_config_path = PathJoinSubstitution(
-        [FindPackageShare('linorobot2_navigation'), 'config', 'navigation.yaml']
-    )
-
     nav2_sim_config_path = PathJoinSubstitution(
         [FindPackageShare('linorobot2_navigation'), 'config', 'navigation_sim.yaml']
     )
+    nav2_common_config_path = os.path.join(
+        get_package_share_directory('linorobot2_navigation'),
+        'config', 'navigation_common.yaml')
 
 
     return LaunchDescription([
@@ -68,25 +126,19 @@ def generate_launch_description():
             description='Navigation map path'
         ),
 
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(nav2_launch_path),
-            condition=UnlessCondition(LaunchConfiguration("sim")),
-            launch_arguments={
-                'map': LaunchConfiguration("map"),
-                'use_sim_time': LaunchConfiguration("sim"),
-                'params_file': nav2_config_path
-            }.items()
+        DeclareLaunchArgument(
+            name='sim_params_file',
+            default_value=nav2_sim_config_path,
+            description='Simulation-specific Nav2 parameters; override for Fortress profiles'
         ),
 
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(nav2_launch_path),
-            condition=IfCondition(LaunchConfiguration("sim")),
-            launch_arguments={
-                'map': LaunchConfiguration("map"),
-                'use_sim_time': LaunchConfiguration("sim"),
-                'params_file': nav2_sim_config_path
-            }.items()
+        DeclareLaunchArgument(
+            name='common_params_file',
+            default_value=nav2_common_config_path,
+            description='Shared planner/costmap parameters merged below the selected profile'
         ),
+
+        OpaqueFunction(function=_launch_nav2),
 
         Node(
             package='rviz2',

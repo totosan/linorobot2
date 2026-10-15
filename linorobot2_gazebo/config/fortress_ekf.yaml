@@ -1,0 +1,27 @@
+# Fortress-only EKF profile. Keep the hardware/base EKF profile unchanged.
+# G3 measured wheel-derived yaw-rate bias under simulated contact slip; fuse
+# forward/lateral wheel velocity, but use the simulated IMU for yaw rate.
+ekf_filter_node:
+    ros__parameters:
+        frequency: 50.0
+        two_d_mode: true
+        publish_tf: true
+
+        map_frame: map
+        odom_frame: odom
+        base_link_frame: base_footprint
+        world_frame: odom
+
+        odom0: odom/unfiltered
+        odom0_config: [false, false, false,
+                       false, false, false,
+                       true, true, false,
+                       false, false, false,
+                       false, false, false]
+
+        imu0: imu/data
+        imu0_config: [false, false, false,
+                      false, false, false,
+                      false, false, false,
+                      false, false, true,
+                      false, false, false]

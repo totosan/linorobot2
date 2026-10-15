@@ -1,0 +1,35 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:macro name="fortress_imu" params="frame_id:=imu_link topic_name:=/imu/data gyro_noise_stddev:=0.0 accel_noise_stddev:=0.0">
+    <link name="${frame_id}"/>
+
+    <joint name="${frame_id}_to_base_link" type="fixed">
+      <parent link="base_link"/>
+      <child link="${frame_id}"/>
+      <origin xyz="0 0 0" rpy="0 0 0"/>
+    </joint>
+
+    <gazebo reference="${frame_id}">
+      <sensor name="${frame_id}_sensor" type="imu">
+        <always_on>true</always_on>
+        <update_rate>50</update_rate>
+        <visualize>false</visualize>
+        <topic>${topic_name}</topic>
+        <gz_frame_id>${frame_id}</gz_frame_id>
+        <pose>0 0 0 0 0 0</pose>
+        <imu>
+          <angular_velocity>
+            <x><noise type="gaussian"><mean>0.0</mean><stddev>${gyro_noise_stddev}</stddev></noise></x>
+            <y><noise type="gaussian"><mean>0.0</mean><stddev>${gyro_noise_stddev}</stddev></noise></y>
+            <z><noise type="gaussian"><mean>0.0</mean><stddev>${gyro_noise_stddev}</stddev></noise></z>
+          </angular_velocity>
+          <linear_acceleration>
+            <x><noise type="gaussian"><mean>0.0</mean><stddev>${accel_noise_stddev}</stddev></noise></x>
+            <y><noise type="gaussian"><mean>0.0</mean><stddev>${accel_noise_stddev}</stddev></noise></y>
+            <z><noise type="gaussian"><mean>0.0</mean><stddev>${accel_noise_stddev}</stddev></noise></z>
+          </linear_acceleration>
+        </imu>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>

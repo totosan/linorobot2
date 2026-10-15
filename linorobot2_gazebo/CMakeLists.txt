@@ -4,29 +4,31 @@ project(linorobot2_gazebo)
 find_package(ament_cmake REQUIRED)
 find_package(ament_cmake_python REQUIRED)
 find_package(rclpy REQUIRED)
+find_package(ignition-gazebo6 REQUIRED)
+find_package(ignition-math6 REQUIRED)
+find_package(ignition-plugin1 REQUIRED COMPONENTS register)
 
-execute_process(
-  COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/scripts/map2gazebo.py
-  --map_dir ${CMAKE_CURRENT_SOURCE_DIR}/../linorobot2_navigation/maps
-  --model_dir ${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}/models
-  --world_dir ${CMAKE_INSTALL_PREFIX}/share/${PROJECT_NAME}/worlds
-  RESULT_VARIABLE SCRIPT_RESULT
-  OUTPUT_VARIABLE SCRIPT_OUTPUT
+add_library(g4_random_seed_system SHARED
+  src/g4_random_seed_system.cpp
+)
+target_link_libraries(g4_random_seed_system
+  ignition-gazebo6::ignition-gazebo6
+  ignition-math6::ignition-math6
+  ignition-plugin1::register
+)
+target_compile_features(g4_random_seed_system PRIVATE cxx_std_17)
+install(TARGETS g4_random_seed_system
+  LIBRARY DESTINATION lib
 )
 
-if(NOT SCRIPT_RESULT EQUAL 0)
-  message(WARNING "Python script execution failed with error code: ${SCRIPT_RESULT}")
-  message(WARNING "Script output: ${SCRIPT_OUTPUT}")
-endif()
-
 install(
-  DIRECTORY launch rviz worlds
+  DIRECTORY launch rviz worlds config
   DESTINATION share/${PROJECT_NAME}
 )
 
-install(PROGRAMS
-  scripts/command_timeout.py
-  DESTINATION lib/${PROJECT_NAME}
+install(FILES
+  scripts/camera_fault_proxy.py
+  DESTINATION share/${PROJECT_NAME}/scripts
 )
 
 ament_environment_hooks("${CMAKE_CURRENT_SOURCE_DIR}/env-hooks/linorobot2_gazebo.sh.in")

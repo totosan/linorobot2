@@ -81,6 +81,11 @@ def generate_launch_description():
             default_value='false',
             description='start webcam node'
         ),
+        DeclareLaunchArgument(
+            name='lidar_serial_port',
+            default_value='/dev/ttyUSB1',
+            description='Serial port for the configured lidar'
+        ),
         GroupAction(
             actions=[
                 IncludeLaunchDescription(
@@ -94,7 +99,8 @@ def generate_launch_description():
             PythonLaunchDescriptionSource(laser_launch_path),
             condition=IfCondition(PythonExpression(['"" != "', laser_sensor_name, '"'])),
             launch_arguments={
-                'sensor': laser_sensor_name
+                'sensor': laser_sensor_name,
+                'lidar_serial_port': LaunchConfiguration('lidar_serial_port')
             }.items()   
         ),
         Node(

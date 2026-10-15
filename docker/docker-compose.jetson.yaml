@@ -1,0 +1,65 @@
+services:
+  builder:
+    image: ${JETSON_ROS_IMAGE:-l4t-ros2:humble-v2.4}
+    profiles: ["build"]
+    network_mode: none
+    read_only: true
+    tmpfs:
+      - /tmp:size=1g
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      COLCON_HOME: /tmp/colcon
+      ROS_HOME: /tmp/ros
+      ROS_LOG_DIR: /tmp/ros/log
+    volumes:
+      - ${JETSON_WORKSPACE:-/home/jetson/linorobot2_ws}/src:/project/linorobot2_ws/src:ro
+      - ${JETSON_WORKSPACE:-/home/jetson/linorobot2_ws}/build:/project/linorobot2_ws/build:rw
+      - ${JETSON_WORKSPACE:-/home/jetson/linorobot2_ws}/install:/project/linorobot2_ws/install:rw
+      - ${JETSON_WORKSPACE:-/home/jetson/linorobot2_ws}/log:/project/linorobot2_ws/log:rw
+    working_dir: /project/linorobot2_ws
+    entrypoint: ["/bin/bash"]
+    command:
+      - -lc
+      - >-
+        set -e &&
+        source /opt/ros/humble/setup.bash &&
+        source /project/linorobot2_ws/install/setup.bash &&
+        colcon build --packages-select linorobot2_base linorobot2_bringup &&
+        source /project/linorobot2_ws/install/setup.bash &&
+        python3 -c "from linorobot2_base.domain_profile import resolve_ros_domain; assert resolve_ros_domain('hardware', '44') == '44'" &&
+        test -f /project/linorobot2_ws/install/linorobot2_bringup/share/linorobot2_bringup/launch/bringup.launch.py &&
+        ros2 launch linorobot2_bringup bringup.launch.py --show-args &&
+        python3 /project/linorobot2_ws/src/linorobot2/tests/validate_lidar_monitor_launch.py
+
+  robot:
+    image: ${JETSON_ROS_IMAGE:-l4t-ros2:humble-v2.4}
+    container_name: linorobot2-jetson
+    init: true
+    network_mode: host
+    stop_grace_period: 5s
+    environment:
+      ROS_DOMAIN_ID: ${ROS_DOMAIN_ID:-44}
+      LINOROBOT2_BASE: 2wd
+      LINOROBOT2_LASER_SENSOR: a1
+    volumes:
+      - ${JETSON_WORKSPACE:-/home/jetson/linorobot2_ws}:/project/linorobot2_ws:rw
+    devices:
+      # Host udev rules identify these physical USB ports; never depend on ttyUSB ordering.
+      - ${JETSON_ESP32_DEVICE:-/dev/ttyESP32}:/dev/ttyUSB0
+      - ${JETSON_LIDAR_DEVICE:-/dev/rplidar}:/dev/ttyUSB1
+    working_dir: /project/linorobot2_ws
+    entrypoint: ["/bin/bash"]
+    command:
+      - -lc
+      - >-
+        source /opt/ros/humble/setup.bash &&
+        source /project/linorobot2_ws/install/setup.bash &&
+        export LINOROBOT2_BASE=2wd LINOROBOT2_LASER_SENSOR=a1 &&
+        exec ros2 launch linorobot2_bringup bringup.launch.py
+        ros_profile:=hardware ros_domain_id:=${ROS_DOMAIN_ID:-44}
+        base_serial_port:=/dev/ttyUSB0 lidar_serial_port:=/dev/ttyUSB1
+        micro_ros_transport:=${MICRO_ROS_TRANSPORT:-serial}
+        micro_ros_baudrate:=${MICRO_ROS_BAUDRATE:-921600}
+        webcam_enabled:=false enable_command_timeout:=false

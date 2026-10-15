@@ -1,0 +1,62 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:macro name="fortress_camera" params="frame_id image_topic info_topic">
+    <link name="${frame_id}">
+      <!-- Cosmetic placeholder only; housing dimensions are not measured hardware data. -->
+      <visual name="${frame_id}_housing">
+        <origin xyz="0 0 0" rpy="0 0 0"/>
+        <geometry>
+          <box size="0.052 0.065 0.028"/>
+        </geometry>
+        <material name="camera_housing">
+          <color rgba="0.12 0.14 0.17 1.0"/>
+        </material>
+      </visual>
+      <visual name="${frame_id}_lens">
+        <origin xyz="0.027 0 0" rpy="0 1.5707963 0"/>
+        <geometry>
+          <cylinder radius="0.008" length="0.004"/>
+        </geometry>
+        <material name="camera_lens">
+          <color rgba="0.02 0.02 0.02 1.0"/>
+        </material>
+      </visual>
+    </link>
+    <joint name="${frame_id}_to_base_link" type="fixed">
+      <parent link="base_link"/>
+      <child link="${frame_id}"/>
+      <origin xyz="0.14 0 0.045" rpy="0 0 0"/>
+    </joint>
+
+    <link name="camera_optical_frame"/>
+    <joint name="${frame_id}_to_optical_frame" type="fixed">
+      <parent link="${frame_id}"/>
+      <child link="camera_optical_frame"/>
+      <origin xyz="0 0 0" rpy="-1.57079632679 0 -1.57079632679"/>
+    </joint>
+
+    <gazebo reference="${frame_id}">
+      <sensor name="${frame_id}_sensor" type="camera">
+        <always_on>true</always_on>
+        <update_rate>10</update_rate>
+        <visualize>false</visualize>
+        <topic>${image_topic}</topic>
+        <camera_info_topic>${info_topic}</camera_info_topic>
+        <gz_frame_id>camera_optical_frame</gz_frame_id>
+        <pose>0 0 0 0 0 0</pose>
+        <camera>
+          <horizontal_fov>1.047</horizontal_fov>
+          <image>
+            <width>640</width>
+            <height>480</height>
+            <format>R8G8B8</format>
+          </image>
+          <clip>
+            <near>0.1</near>
+            <far>100</far>
+          </clip>
+        </camera>
+      </sensor>
+    </gazebo>
+  </xacro:macro>
+</robot>

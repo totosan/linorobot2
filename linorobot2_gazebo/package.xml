@@ -11,12 +11,29 @@
     <url type="bugtracker">https://github.com/linorobot/linorobot2/issues</url>
     <buildtool_depend>ament_cmake</buildtool_depend>
     <buildtool_depend>ament_cmake_python</buildtool_depend>
+    <build_depend>ignition-gazebo6</build_depend>
+    <build_depend>ignition-math6</build_depend>
+    <build_depend>ignition-plugin1</build_depend>
     <exec_depend>robot_localization</exec_depend>
     <exec_depend>ros_gz_sim</exec_depend>
+    <exec_depend>gazebo_ros_pkgs</exec_depend>
+    <exec_depend>ros_ign_gazebo</exec_depend>
+    <exec_depend>ros_ign_bridge</exec_depend>
+    <exec_depend>ros_ign_interfaces</exec_depend>
+    <exec_depend>linorobot2_description</exec_depend>
+    <exec_depend>linorobot2_vision</exec_depend>
+    <exec_depend>robot_state_publisher</exec_depend>
+    <exec_depend>rviz2</exec_depend>
+    <exec_depend>xacro</exec_depend>
     <exec_depend>rclpy</exec_depend>
+    <exec_depend>std_srvs</exec_depend>
     <exec_depend>geometry_msgs</exec_depend>
+    <exec_depend>nav_msgs</exec_depend>
+    <exec_depend>sensor_msgs</exec_depend>
+    <exec_depend>rosgraph_msgs</exec_depend>
     <exec_depend>image_proc</exec_depend>
     <exec_depend>depth_image_proc</exec_depend>
+    <exec_depend>linorobot2_base</exec_depend>
     <exec_depend>python-trimesh-pip</exec_depend>
     <exec_depend>python3-numpy</exec_depend>
     <exec_depend>python3-pycollada</exec_depend>

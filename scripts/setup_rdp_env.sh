@@ -59,7 +59,8 @@ systemctl is-active --quiet xrdp.service xrdp-sesman.service
 python3 "$SCRIPT_DIR/check_rdp_ready.py"
 openssl x509 -in /etc/xrdp/cert.pem -noout -fingerprint -sha256
 
-echo "Mac: Tunnel mit scripts/connect_rdp_mac.sh starten und RDP-Client mit 127.0.0.1:13389 verbinden, Benutzer $RDP_USER, Sitzung Xorg."
+echo "Mac: RDP-Client mit 127.0.0.1:13389 verbinden, Benutzer $RDP_USER, Sitzung Xorg."
+echo "Brücke in der VM aktivieren: bash scripts/configure_rdp_bridge.sh --enable (ohne sie: scripts/connect_rdp_mac.sh als Tunnel-Fallback)."
 PASSWORD_STATE="$(passwd -S "$RDP_USER" | awk '{print $2}')"
 case "$PASSWORD_STATE" in
     L|NP)

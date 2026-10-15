@@ -45,6 +45,13 @@ den einzelnen Test ausdrücklich freigegeben hat.
 
 ### Abgeschlossen / kein offener Punkt
 
+- **VM-seitiger RDP-Autostart bestätigt am 15.10.2026:** Der Mac-SSH-Tunnel ist
+  keine Voraussetzung mehr. `linorobot2-rdp-bridge.socket` startet mit der VM
+  und leitet Port 13389 an das unverändert loopback-gebundene xrdp weiter. Nach
+  echtem VM-Neustart kam die Brücke ohne manuellen Eingriff hoch, und der
+  Client verband sich mit dem unveränderten Profil. Die OrbStack-Einstellung
+  `machines.expose_ports_to_lan` steht auf `false`, weil der Default den
+  RDP-Login sonst im Heim-LAN erreichbar macht.
 - **RDP-Reconnect und 1280×800 bestätigt am 15.10.2026:** Der lokale Tunnel,
   beide Guest-Loopback-Listener und der Reconnect auf die bestehende
   Xorg-Sitzung `:10.0` bestanden. `xrandr` meldete 1280×800. Die

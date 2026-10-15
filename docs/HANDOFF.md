@@ -19,8 +19,10 @@ Die alte ausführliche Übergabe bleibt als [`archive/HANDOFF_2026-10-07.md`](ar
 - **Nächste Arbeit:** G9 ist mit zwei Remote-Frischreleases, Headless-Smokes und
   atomarem Rollback bestanden. Die G3-Diskriminatoren sind abgeschlossen:
   halbierter Physikschritt und Caster-Nullreibung änderten den Faktor nicht
-  messbar; Caster-Entfernung war physikalisch ungültig. Der RDP-Reconnect
-  bestand mit 1280×800 und ausschließlich lokalen Tunnel-/Guest-Listenern.
+  messbar; Caster-Entfernung war physikalisch ungültig. Der RDP-Zugang braucht
+  keinen Mac-Tunnel mehr: eine VM-seitige systemd-Brücke startet mit der VM und
+  leitet auf das weiterhin loopback-gebundene xrdp; Reconnect bestand mit
+  1280×800. Die OrbStack-Weiterleitung ist auf Loopback beschränkt.
   Damit ist keine weitere hardwareunabhängige Arbeit offen;
   Pi-/Jetson-/HIL-Arbeit bleibt nachgelagert.
 - **TF2:** gepinnter Humble-Fix manuell per A/B geprüft. Original reproduziert den Deadlock, Overlay besteht 11/11 upstream Buffer-Tests. `/opt/ros` wurde nicht überschrieben.

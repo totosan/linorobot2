@@ -3,6 +3,7 @@
 
 from pathlib import Path
 import os
+import platform
 import subprocess
 import tempfile
 import unittest
@@ -127,6 +128,102 @@ class RdpSessionTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 1)
         self.assertIn("Kein lokales RDP-X11-Display", result.stderr)
+
+
+ON_DARWIN = platform.system() == "Darwin"
+BRIDGE = str(Path(__file__).with_name("configure_rdp_bridge.sh"))
+TUNNEL = str(Path(__file__).with_name("connect_rdp_mac.sh"))
+MARKER = "# X-Linorobot2-Managed: true"
+
+
+def _stub(root, name, body):
+    path = root / name
+    path.write_text(body)
+    path.chmod(0o755)
+
+
+class RdpBridgeUnitTests(unittest.TestCase):
+    def _units(self):
+        result = subprocess.run(
+            ["bash", BRIDGE, "--print-units"], text=True, capture_output=True,
+            check=True,
+        )
+        socket_unit, service_unit = result.stdout.split("### ")[1:]
+        return socket_unit, service_unit
+
+    def test_socket_has_no_device_dependency(self):
+        socket_unit, _ = self._units()
+        self.assertIn("ListenStream=0.0.0.0:13389", socket_unit)
+        self.assertIn("ListenStream=[::]:13389", socket_unit)
+        self.assertIn("WantedBy=sockets.target", socket_unit)
+        self.assertIn(MARKER, socket_unit)
+        # BindToDevice= erzeugt eine Abhaengigkeit auf ein .device-Unit. OrbStack
+        # aktiviert solche Units nicht, der Socket scheiterte damit beim Boot.
+        self.assertNotIn("BindToDevice", socket_unit)
+
+    def test_service_proxies_to_loopback_xrdp_without_private_network(self):
+        _, service_unit = self._units()
+        self.assertIn("systemd-socket-proxyd 127.0.0.1:3389", service_unit)
+        self.assertIn("After=linorobot2-rdp-bridge.socket xrdp.service", service_unit)
+        self.assertIn(MARKER, service_unit)
+        # PrivateNetwork wuerde das Loopback des Hosts verdecken; dann liefe die
+        # Weiterleitung ins leere Namespace-Loopback statt zu xrdp.
+        self.assertNotIn("PrivateNetwork", service_unit)
+        self.assertIn("DynamicUser=yes", service_unit)
+        self.assertIn("CapabilityBoundingSet=\n", service_unit)
+
+    def test_bridge_never_exposes_xrdp_itself(self):
+        socket_unit, service_unit = self._units()
+        self.assertNotIn("0.0.0.0:3389", socket_unit + service_unit)
+
+    def test_usage_rejects_unknown_and_multiple_arguments(self):
+        for arguments in ([], ["--enable", "--disable"], ["--bogus"]):
+            result = subprocess.run(["bash", BRIDGE, *arguments], text=True,
+                                    capture_output=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("Usage:", result.stderr)
+
+    @unittest.skipUnless(ON_DARWIN, "Der Mac-Guard ist nur dort pruefbar")
+    def test_enable_refused_on_mac(self):
+        result = subprocess.run(["bash", BRIDGE, "--enable"], text=True,
+                                capture_output=True)
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("gehoert in die VM", result.stderr)
+
+
+class RdpTunnelFallbackTests(unittest.TestCase):
+    @unittest.skipUnless(ON_DARWIN, "Der Tunnel laeuft nur auf dem Mac")
+    def test_existing_listener_prevents_second_tunnel(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _stub(root, "lsof", '#!/bin/sh\necho 4242\n')
+            _stub(root, "ssh", '#!/bin/sh\necho started > "$RDP_TRACE"\n')
+            result = subprocess.run(
+                ["bash", TUNNEL], text=True, capture_output=True,
+                env=dict(os.environ, PATH=str(root) + os.pathsep + os.environ["PATH"],
+                         RDP_TRACE=str(root / "ssh.log")),
+            )
+            self.assertEqual(result.returncode, 0)
+            self.assertIn("läuft bereits (PID 4242)", result.stdout)
+            self.assertFalse((root / "ssh.log").exists())
+
+    @unittest.skipUnless(ON_DARWIN, "Der Tunnel laeuft nur auf dem Mac")
+    def test_tunnel_forwards_loopback_only(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            _stub(root, "lsof", '#!/bin/sh\nexit 1\n')
+            _stub(root, "ssh", '#!/bin/sh\nprintf "%s\\n" "$*"\n')
+            result = subprocess.run(
+                ["bash", TUNNEL], text=True, capture_output=True, check=True,
+                env=dict(os.environ, PATH=str(root) + os.pathsep + os.environ["PATH"],
+                         RDP_TUNNEL_PORT="13390"),
+            )
+            self.assertIn("-L 127.0.0.1:13390:127.0.0.1:3389", result.stdout)
+            self.assertIn("-L [::1]:13390:127.0.0.1:3389", result.stdout)
+            self.assertIn("-o StrictHostKeyChecking=yes", result.stdout)
+            self.assertIn("-o ExitOnForwardFailure=yes", result.stdout)
+            self.assertIn("toto@ros-humble@orb", result.stdout)
+            self.assertNotIn("0.0.0.0", result.stdout)
 
 
 if __name__ == "__main__":

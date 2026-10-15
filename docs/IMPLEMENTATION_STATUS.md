@@ -4,6 +4,26 @@ Stand: 15.10.2026. Dieses Dokument hält Nachweise, tatsächliche Laufzeit und b
 
 ## Aktueller Gate- und Phasenstatus
 
+- **VM-seitiger RDP-Autostart am 15.10.2026 bestanden:** Der Mac-SSH-Tunnel ist
+    als Voraussetzung entfallen. In der VM leiten
+    `linorobot2-rdp-bridge.socket`/`.service` Port 13389 per
+    `systemd-socket-proxyd` an das unverändert loopback-gebundene xrdp
+    `127.0.0.1:3389` weiter; `configure_rdp.py` blieb unangetastet. Ein erster
+    Versuch mit `BindToDevice=eth0` scheiterte beim Boot reproduzierbar mit
+    „Dependency failed", weil OrbStack keine Netzwerk-Device-Units aktiviert
+    (`sys-subsystem-net-devices-eth0.device` bleibt auch im gebooteten Zustand
+    `inactive`); die Units binden daher ohne Device-Abhängigkeit. Nach einem
+    echten VM-Neustart (gewechselte `boot_id`) meldete das Journal ohne
+    manuellen Eingriff „Listening on Linorobot2 RDP bridge socket"; Windows App
+    verband sich ohne Tunnel über das unveränderte Profil, und die Kette
+    `127.0.0.1:13389 → 127.0.0.1:3389` war in `ss` belegt. Die frisch
+    aufgebaute Sitzung `:10` meldete ausschließlich 1280×800.
+    **Sicherheitsbefund:** Mit OrbStack-Default `machines.expose_ports_to_lan=true`
+    war der RDP-Login kurzzeitig unter der LAN-Adresse `192.168.0.174:13389`
+    erreichbar (macOS-Firewall deaktiviert). Nach `orb config set
+    machines.expose_ports_to_lan false` plus OrbStack-Neustart band der Mac nur
+    noch `127.0.0.1:13389`, und die LAN-Adresse war nicht mehr erreichbar.
+    18 gezielte Regressionstests und Shellsyntaxprüfungen bestanden.
 - **RDP-Auflösungsprüfung am 15.10.2026 bestanden:** xrdp und sesman waren
     aktiv und ausschließlich an Guest-Loopback gebunden
     (`127.0.0.1:3389`, `[::1]:3350`). Der Mac-Tunnel lauschte ausschließlich

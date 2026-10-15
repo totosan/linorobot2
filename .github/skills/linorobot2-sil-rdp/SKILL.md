@@ -235,13 +235,25 @@ claim `.71`, TensorRT, G5, or hardware performance from the local detector.
 
 ## RDP and visualization
 
-1. On the Mac, start exactly one canonical tunnel and keep its terminal open:
-   `bash /Users/toto/Projects/linobot2_ws/src/linorobot2/scripts/connect_rdp_mac.sh`.
-   Connect the versioned `ros-humble-rdp.rdp` profile in Windows App to
-   `127.0.0.1:13389`, without a gateway. If that port is already occupied,
-   inspect its exact listener instead of starting a second tunnel.
+1. RDP needs no Mac-side tunnel. A VM systemd bridge
+   (`linorobot2-rdp-bridge.socket`/`.service`) starts with the VM, listens on
+   port 13389 and proxies to loopback-only xrdp `127.0.0.1:3389`; OrbStack
+   mirrors that port to the Mac. Connect the versioned `ros-humble-rdp.rdp`
+   profile in Windows App to `127.0.0.1:13389`, without a gateway. Manage the
+   bridge inside the VM with
+   `bash scripts/configure_rdp_bridge.sh --status | --enable | --disable`.
+   Never add `BindToDevice=` to the socket: OrbStack does not activate network
+   device units, so the dependency makes the socket fail at boot.
+   The access boundary depends on the OrbStack setting
+   `machines.expose_ports_to_lan`. It must stay `false`, otherwise the Mac
+   binds the forward on all interfaces and exposes the RDP login to the local
+   network. Verify with `orb config show | grep expose_ports_to_lan` before
+   treating the setup as loopback-only.
+   `scripts/connect_rdp_mac.sh` remains a manual SSH-tunnel fallback and exits
+   cleanly instead of starting a second tunnel when port 13389 is taken.
 2. Diagnose availability in layers before changing configuration:
-   - Mac listener: `lsof -nP -iTCP:13389 -sTCP:LISTEN`
+   - Mac listener: `lsof -nP -iTCP:13389 -sTCP:LISTEN` (expect `127.0.0.1` only)
+   - Guest bridge: `orb -m ros-humble bash -lc 'bash scripts/configure_rdp_bridge.sh --status'`
    - Guest services/listeners:
      `orb -m ros-humble python3 /Users/toto/Projects/linobot2_ws/src/linorobot2/scripts/check_rdp_ready.py`
    - Existing Xorg session/display: inspect `loginctl`, xrdp/Xorg processes,
@@ -251,8 +263,11 @@ claim `.71`, TensorRT, G5, or hardware performance from the local detector.
    raw TCP connection. `nc`, a bare socket connect, or similar non-RDP probes
    can create alarming xrdp protocol errors even when the service is healthy.
 3. The guest desktop uses local X11 `DISPLAY=:10.0`, XFCE and Mesa/llvmpipe.
-   Keep xrdp and sesman loopback-only. Never use `xhost +`, public listeners,
-   or firewall changes as workarounds.
+   Keep xrdp and sesman loopback-only; the documented bridge socket is the only
+   exception. Never use `xhost +` or firewall changes as workarounds. The
+   profile pins 1280×800 with `dynamic resolution:i:0` to cut llvmpipe CPU
+   cost, not because of a protocol limit; xorgxrdp refuses a later RandR
+   framebuffer change, so the size is only settled at connection setup.
 4. In an XFCE terminal inside the RDP desktop, start the stationary Gazebo+RViz view:
 
    ```bash
